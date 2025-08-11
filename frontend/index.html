@@ -2139,6 +2139,20 @@ Would you like to update what brings meaning to your life?`,
             currentPhase = "about_me_review";
         }
 
+        // Function to check understanding after doctor info discussion
+        function checkMedicalUnderstanding() {
+            showBotMessage(
+                `Before we move on, I want to make sure you feel clear about everything we've discussed.
+
+On a scale of 1-10, how confident do you feel about understanding the medical information now?
+
+(1 = Still very confused, 10 = Completely clear)
+
+Remember, it's perfectly okay if you're not at a 10 - medical information can be complex, and we can keep working through it together.`
+            );
+            currentPhase = "medical_understanding_check";
+        }
+
         // Detect potential conflicts between user input and About Me profile
         function detectAboutMeConflict(userMessage) {
             const lowerMessage = userMessage.toLowerCase();
@@ -4672,6 +4686,69 @@ Shall we explore what matters most to you?`,
                 return;
             }
             
+            // Prepare for a visit with my doctor
+            if (lowerMessage.includes('prepare for a visit') || 
+                lowerMessage.includes('visit with my doctor')) {
+                currentPhase = "doctor_visit_prep";
+                
+                showBotMessage(
+                    `I'd love to help you feel prepared and confident for your doctor's visit, ${userHistory.profile.name}.
+
+I can support you in several ways:
+
+- **Think through questions** your doctor might ask, so you're ready with clear answers
+- **Create a list of questions** you want to ask - you can take this list with you
+- **Build an 'About Me Card'** that captures what matters most to you, ensuring your care aligns with your values and circumstances
+
+Before we begin, may I ask: On a scale of 1-10, how confident do you feel about communicating what matters most to you during medical visits?
+
+(1 = Very nervous, 10 = Completely confident)`,
+                    []
+                );
+                return;
+            }
+
+            // Discuss what my doctor told me
+            if (lowerMessage.includes('discuss what my doctor told me') || 
+                lowerMessage.includes('information they gave me')) {
+                currentPhase = "doctor_info_discussion";
+                
+                showBotMessage(
+                    `I'm here to help you understand and process what you learned from your doctor, ${userHistory.profile.name}.
+
+Sometimes medical information can feel overwhelming, and it's perfectly normal to need time to digest it all.
+
+Would you like to:
+- Talk through what your doctor explained
+- Upload a document or notes for me to help explain
+- Discuss specific medical terms or concepts
+- Process how you're feeling about what you learned
+
+What would be most helpful for you right now?`,
+                    [
+                        "→ Explain what they told me",
+                        "→ Upload medical documents",
+                        "→ Define medical terms",
+                        "→ Process my feelings about it"
+                    ]
+                );
+                return;
+            }
+
+            // Something else
+            if (lowerMessage.includes('something else')) {
+                currentPhase = "open_ended";
+                
+                showBotMessage(
+                    `Of course! I'm here to support whatever is on your mind today.
+
+Please share what you'd like to explore or discuss. Whether it's a specific concern, a question about brain health, or anything else that matters to you - I'm listening with full attention.
+
+What would you like to focus on?`
+                );
+                return;
+            }
+
             // Path selections (narrative branches)
             if (currentPhase === "story_beginning" || currentPhase === "chapter_creation") {
                 if (lowerMessage.includes('movement') || lowerMessage.includes('path of movement')) {
@@ -4744,6 +4821,155 @@ How would you like to strengthen your connections?`,
                             "→ Share your wisdom with others"
                         ]
                     );
+                    return;
+                }
+            }
+
+            // Handle doctor visit preparation confidence response
+            if (currentPhase === "doctor_visit_prep" && !isNaN(parseInt(message))) {
+                const confidence = parseInt(message);
+                logEmotionalState(`doctor_communication_confidence_${confidence}`, 'doctor_visit_prep');
+                
+                let response = "";
+                if (confidence <= 3) {
+                    response = `I understand - medical visits can feel intimidating. Many people share this feeling, and it's completely valid.
+
+Let's work together to build your confidence. We'll start with something simple and empowering.`;
+                } else if (confidence <= 7) {
+                    response = `That's a good foundation to build on. Even experienced advocates sometimes need a little preparation.
+
+Let's strengthen your confidence even more.`;
+                } else {
+                    response = `Wonderful! Your confidence is inspiring. Let's make sure you have everything you need to make this visit as productive as possible.`;
+                }
+                
+                response += `\n\nWhat would you like to work on first?`;
+                
+                showBotMessage(response, [
+                    "→ Questions my doctor might ask me",
+                    "→ Questions I want to ask my doctor",
+                    "→ Create my About Me Card",
+                    "→ Practice explaining my concerns"
+                ]);
+                
+                currentPhase = "doctor_prep_choice";
+                return;
+            }
+
+            // Handle doctor prep choices
+            if (currentPhase === "doctor_prep_choice") {
+                if (lowerMessage.includes('questions my doctor might ask')) {
+                    showBotMessage(
+                        `Let's think through common questions doctors ask, so you'll feel ready. Here are some typical ones:
+
+**1. "What brings you in today?"**
+Think about your main concern in one clear sentence.
+
+**2. "How long has this been going on?"**
+Try to remember when you first noticed changes.
+
+**3. "How is this affecting your daily life?"**
+${userHistory.aboutMe.bestLifeElements.length > 0 ? 
+`This connects to what matters most to you - like ${userHistory.aboutMe.bestLifeElements[0].element.toLowerCase()}.` : 
+'Think about specific activities that have become harder.'}
+
+**4. "What medications are you taking?"**
+Having a written list helps here.
+
+Would you like to practice answering any of these? Or shall we prepare a different type of question?`,
+                        [
+                            "→ Practice my main concern",
+                            "→ Timeline of changes",
+                            "→ Daily life impacts",
+                            "→ Prepare medication list"
+                        ]
+                    );
+                    currentPhase = "doctor_questions_practice";
+                    return;
+                }
+                
+                if (lowerMessage.includes('questions i want to ask')) {
+                    showBotMessage(
+                        `Excellent! Having your own questions ready helps you get the most from your visit.
+
+Let me help you build a list. What's your biggest concern or what do you most want to understand?
+
+Some examples to inspire you:
+- "What exactly is causing my symptoms?"
+- "What are my treatment options?"
+- "How might this affect my ability to ${userHistory.aboutMe.bestLifeElements[0]?.element.toLowerCase() || 'do what I love'}?"
+- "What should I watch for?"
+
+Share your first question, and we'll build your list together.`
+                    );
+                    currentPhase = "building_question_list";
+                    return;
+                }
+                
+                if (lowerMessage.includes('create my about me card')) {
+                    showBotMessage(
+                        `Your About Me Card is a powerful tool - it helps your doctor understand not just your symptoms, but who you are and what matters to you.
+
+Based on what you've shared with me, here's a draft:
+
+**ABOUT ME CARD**
+**Name:** ${userHistory.profile.name}
+
+**What Living Well Means to Me:**
+${userHistory.aboutMe.bestLifeElements.map(e => `• ${e.element}`).join('\n')}
+
+**My Current Concerns:**
+${userHistory.aboutMe.concerns.map(c => `• ${c.concern}`).join('\n')}
+
+**My Goals:**
+${userHistory.goals.filter(g => g.status === 'active').slice(0, 2).map(g => `• ${g.goal}`).join('\n')}
+
+**Important for My Care Team to Know:**
+- My confidence level: ${userHistory.aboutMe.confidenceLevel || 'Working on building confidence'}
+
+Would you like to:`,
+                        [
+                            "→ Add something important",
+                            "→ Remove something",
+                            "→ Print/save this card",
+                            "→ Create a shorter version"
+                        ]
+                    );
+                    currentPhase = "about_me_card_editing";
+                    return;
+                }
+            }
+
+            // Handle doctor information discussion
+            if (currentPhase === "doctor_info_discussion") {
+                if (lowerMessage.includes('explain what they told me')) {
+                    showBotMessage(
+                        `I'm here to help make sense of what your doctor shared. Sometimes it helps to talk it through with someone who can listen without judgment.
+
+Please share what your doctor told you - you can:
+- Type it in your own words
+- Share specific terms you didn't understand
+- Describe the overall message
+
+Take your time. What did they say?`
+                    );
+                    currentPhase = "doctor_explanation";
+                    return;
+                }
+                
+                if (lowerMessage.includes('upload medical documents')) {
+                    showBotMessage(
+                        `You can upload your medical documents using the upload button (📄) at the bottom right of the screen.
+
+I can help explain:
+- Test results
+- Treatment plans  
+- Medication information
+- Medical terminology
+
+Once you upload, I'll help break down the information into clear, understandable pieces.`
+                    );
+                    currentPhase = "awaiting_medical_upload";
                     return;
                 }
             }
