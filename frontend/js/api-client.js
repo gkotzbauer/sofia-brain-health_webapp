@@ -3,7 +3,7 @@ const SofiaAPI = (function() {
     // Auto-detect API URL based on environment
     const API_BASE_URL = window.location.hostname === 'localhost' 
         ? 'http://localhost:10000/api' 
-        : window.location.protocol + '//' + window.location.hostname.replace('frontend', 'api') + '/api';
+        : (window.SofiaConfig ? window.SofiaConfig.API_BASE_URL : 'https://your-render-app-name.onrender.com/api');
     
     let authToken = localStorage.getItem('sofia_auth_token');
     let currentUser = null;
