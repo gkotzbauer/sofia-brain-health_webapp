@@ -2,13 +2,13 @@ databases:
   - name: sofia-db
     databaseName: sofia_db
     user: sofia
-    plan: starter
+    plan: free  # Changed from 'starter' to 'free'
     
 services:
   - type: web
     name: sofia-backend
     runtime: node
-    plan: starter
+    plan: free  # Changed from 'starter' to 'free'
     buildCommand: cd backend && npm install
     startCommand: cd backend && node server.js
     envVars:
@@ -31,6 +31,7 @@ services:
   - type: web
     name: sofia-frontend
     runtime: static
+    plan: free  # Added explicit free plan
     buildCommand: echo "No build needed"
     staticPublishPath: ./frontend
     routes:
