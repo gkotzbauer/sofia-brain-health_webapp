@@ -687,6 +687,26 @@
             background: #e8f0fe;
             padding: 10px 15px;
             border-radius: 20px;
+        }
+
+        /* Enhanced Continue button styling */
+        button[id^="continue-"] {
+            background: #764ba2 !important;
+            color: white !important;
+            border: 2px solid #764ba2 !important;
+            box-shadow: 0 2px 5px rgba(118, 75, 162, 0.3) !important;
+            font-weight: bold !important;
+            font-size: 16px !important;
+            padding: 14px 30px !important;
+            transition: all 0.3s !important;
+        }
+
+        button[id^="continue-"]:hover {
+            background: #5a3a8a !important;
+            border-color: #5a3a8a !important;
+            box-shadow: 0 4px 8px rgba(118, 75, 162, 0.4) !important;
+            transform: translateY(-1px);
+        }
             font-size: 12px;
             color: #667eea;
             display: flex;
@@ -1204,6 +1224,14 @@
                     <div class="memory-summary-stat">
                         <span>Topics Explored:</span>
                         <strong id="topicsCount">0</strong>
+                    </div>
+                    <div class="memory-summary-stat">
+                        <span>About Me - Living My Best Life:</span>
+                        <strong id="bestLifeCount">0</strong>
+                    </div>
+                    <div class="memory-summary-stat">
+                        <span>About Me - Key Concerns:</span>
+                        <strong id="concernsCount">0</strong>
                     </div>
                 </div>
                 <div class="memory-filters">
@@ -4014,7 +4042,7 @@ To start, may I know your name?`
             const chatContainer = document.getElementById('chatContainer');
             const optionsDiv = document.createElement('div');
             optionsDiv.style.marginTop = '10px';
-            optionsDiv.innerHTML = '<div style="margin-bottom: 10px; font-size: 14px; color: #666;">Select all that apply:</div>';
+            optionsDiv.innerHTML = '<div style="margin-bottom: 10px; font-size: 14px; color: #666;">Select all that apply and click the Continue button:</div>';
             
             const buttonIds = [];
             optionsList.forEach((option, index) => {
@@ -4030,6 +4058,11 @@ To start, may I know your name?`
             // Add continue button
             const continueBtn = document.createElement('button');
             continueBtn.style.marginTop = '15px';
+            continueBtn.style.background = '#764ba2'; // Different purple shade
+            continueBtn.style.border = '2px solid #764ba2';
+            continueBtn.style.boxShadow = '0 2px 5px rgba(118, 75, 162, 0.3)';
+            continueBtn.style.fontWeight = 'bold';
+            continueBtn.style.fontSize = '16px';
             continueBtn.textContent = 'Continue →';
             continueBtn.id = `continue-${optionButtonCounter++}`;
             optionsDiv.appendChild(continueBtn);
