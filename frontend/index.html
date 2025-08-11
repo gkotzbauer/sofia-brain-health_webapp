@@ -3057,9 +3057,19 @@ Would you like to:`,
             const chapters = userHistory.storyChapters ? userHistory.storyChapters.length : 0;
             const topics = userHistory.educationTopics ? userHistory.educationTopics.length : 0;
             
+            // NEW: Count About Me elements
+            const bestLifeCount = userHistory.aboutMe && userHistory.aboutMe.bestLifeElements ? 
+                userHistory.aboutMe.bestLifeElements.length : 0;
+            const concernsCount = userHistory.aboutMe && userHistory.aboutMe.concerns ? 
+                userHistory.aboutMe.concerns.length : 0;
+            
             document.getElementById('activeGoalsCount').textContent = activeGoals;
             document.getElementById('chaptersCount').textContent = chapters;
             document.getElementById('topicsCount').textContent = topics;
+            
+            // NEW: Update About Me counts
+            document.getElementById('bestLifeCount').textContent = bestLifeCount;
+            document.getElementById('concernsCount').textContent = concernsCount;
         }
 
         // Show memory notification
