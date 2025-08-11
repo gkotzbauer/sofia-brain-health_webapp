@@ -4297,30 +4297,64 @@ Would you like to:`,
             // About Me prompt responses
             if (currentPhase === "about_me_prompt") {
                 if (lowerMessage.includes('yes') || lowerMessage.includes('explore')) {
-                    currentPhase = "about_me_best_life";
-                    showBotMessage(
-                        `Wonderful! Let's explore what makes life meaningful for you.
+                    // Only show if we don't have data
+                    if (!userHistory.aboutMe.bestLifeElements || userHistory.aboutMe.bestLifeElements.length === 0) {
+                        currentPhase = "about_me_best_life";
+                        showBotMessage(
+                            `Wonderful! Let's explore what makes life meaningful for you.
 
 When you think about living your best life, what brings you the most joy and fulfillment? I'll share some common themes, and you can select all that resonate with you.`,
-                        [],
-                        false,
-                        true
-                    );
-                    
-                    setTimeout(() => {
-                        showAboutMeOptions(companionConfig.aboutMeFramework.bestLifeElements, 'best-life');
-                    }, 2000);
+                            [],
+                            false,
+                            true
+                        );
+                        
+                        setTimeout(() => {
+                            showAboutMeOptions(companionConfig.aboutMeFramework.bestLifeElements, 'best-life');
+                        }, 2000);
+                    } else {
+                        // We already have this data, skip to concerns or next step
+                        if (!userHistory.aboutMe.concerns || userHistory.aboutMe.concerns.length === 0) {
+                            currentPhase = "about_me_concerns";
+                            showBotMessage(
+                                `I already know what brings meaning to your life. Now let's talk about what might get in the way.
+
+What concerns you most when you think about living your best life?`,
+                                [],
+                                false,
+                                true
+                            );
+                            
+                            setTimeout(() => {
+                                showAboutMeOptions(companionConfig.aboutMeFramework.concernCategories, 'concerns');
+                            }, 2000);
+                        } else {
+                            // We have all data, go to main conversation
+                            currentPhase = "main_conversation";
+                            showBotMessage(
+                                `I already have a complete understanding of what matters to you. Let's continue your brain health journey!
+
+What would you like to explore today?`,
+                                [
+                                    "→ The Path of Movement (Physical activity)",
+                                    "→ The Garden of Rest (Sleep improvement)",
+                                    "→ The Circle of Connection (Social engagement)",
+                                    "→ The Temple of Learning (Mental stimulation)"
+                                ]
+                            );
+                        }
+                    }
                     return;
                 } else if (lowerMessage.includes('skip')) {
-                    currentPhase = "story_beginning";
+                    currentPhase = "main_conversation";
                     showBotMessage(
                         `That's fine, we can explore this another time. Let's continue with your brain health journey.
 
 What would you like to focus on today?`,
                         [
-                            "→ Continue my current quest",
                             "→ Begin a new chapter",
-                            "→ Reflect on my journey"
+                            "→ Set a health goal",
+                            "→ Learn about brain health"
                         ]
                     );
                     return;
