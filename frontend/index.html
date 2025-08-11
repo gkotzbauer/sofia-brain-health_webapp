@@ -4547,8 +4547,10 @@ What would you like to explore first?`,
                 return;
             }
             
-            // Continue working to define my goals or life chapters (was "Continue my current quest")
-            if (lowerMessage.includes('continue working to define my goals') || 
+            // Continue my current quest / Continue working to define my goals or life chapters
+            if (lowerMessage.includes('continue my current quest') || 
+                lowerMessage.includes('current quest') ||
+                lowerMessage.includes('continue working to define my goals') || 
                 lowerMessage.includes('goals or life chapters')) {
                 const activeGoals = userHistory.goals.filter(g => g.status === 'active');
                 if (activeGoals.length > 0) {
@@ -4823,6 +4825,32 @@ How would you like to strengthen your connections?`,
                     );
                     return;
                 }
+            }
+
+            // Begin a new chapter
+            if (lowerMessage.includes('begin a new chapter') || lowerMessage.includes('new chapter')) {
+                currentPhase = "chapter_creation";
+                
+                let chapterPrompt = `A new chapter awaits. Every story needs its turning points - moments where the hero chooses a new direction.`;
+                
+                // Add About Me context
+                if (userHistory.aboutMe.bestLifeElements.length > 0) {
+                    const topElements = userHistory.aboutMe.bestLifeElements.slice(0, 2).map(e => e.element);
+                    chapterPrompt += `\n\nConsidering what matters most to you - ${topElements.join(' and ')} - what calls to you in this moment?`;
+                    chapterPrompt += `\n\nWould you like to learn what you can do or define a plan for any of the options below?`;
+                } else {
+                    chapterPrompt += `\n\nWhat calls to you in this moment of your journey?`;
+                }
+                
+                showBotMessage(chapterPrompt, [
+                    "→ The Path of Movement (Physical activity)",
+                    "→ The Garden of Rest (Sleep improvement)",
+                    "→ The Circle of Connection (Social engagement)",
+                    "→ The Temple of Learning (Mental stimulation)",
+                    "→ The Valley of Calm (Stress management)",
+                    "→ Other - enter what you'd like to do in the message box below"
+                ]);
+                return;
             }
 
             // Handle doctor visit preparation confidence response
