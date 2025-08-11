@@ -1407,6 +1407,27 @@
             return message.replace(/\*\*/g, '');
         }
 
+        // Helper function to categorize brain health questions
+        function detectBrainHealthTopic(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            if (lowerMessage.includes('memory') || lowerMessage.includes('forget')) {
+                return "memory and recall";
+            } else if (lowerMessage.includes('exercise') || lowerMessage.includes('physical')) {
+                return "physical activity and brain health";
+            } else if (lowerMessage.includes('food') || lowerMessage.includes('diet') || lowerMessage.includes('eat')) {
+                return "nutrition and brain health";
+            } else if (lowerMessage.includes('sleep') || lowerMessage.includes('tired')) {
+                return "sleep and brain recovery";
+            } else if (lowerMessage.includes('stress') || lowerMessage.includes('worry') || lowerMessage.includes('anxiety')) {
+                return "stress and emotional wellbeing";
+            } else if (lowerMessage.includes('social') || lowerMessage.includes('lonely') || lowerMessage.includes('friends')) {
+                return "social connections";
+            } else {
+                return "brain health";
+            }
+        }
+
         // Story Moment Recognition Patterns
         const storyMomentPatterns = {
             emotionalTransitions: [
@@ -4040,6 +4061,7 @@ Shall we explore what makes life meaningful for you?`,
                             "→ Continue working to define my goals or life chapters",
                             "→ Begin working to define my goals or a new chapter",
                             "→ Reflect on my journey, document my progress, or update my health numbers",
+                            "→ Learn about brain health",
                             "→ Prepare for a visit with my doctor",
                             "→ Discuss what my doctor told me or the information they gave me",
                             "→ Update what matters to me",
@@ -4758,6 +4780,151 @@ Please share what you'd like to explore or discuss. Whether it's a specific conc
 
 What would you like to focus on?`
                 );
+                return;
+            }
+
+            // Learn about brain health
+            if (lowerMessage.includes('learn about brain health') || 
+                lowerMessage.includes('brain health education')) {
+                currentPhase = "brain_health_learning";
+                
+                showBotMessage(
+                    `I'm so glad you want to learn more about brain health, ${userHistory.profile.name}! Knowledge truly is power when it comes to taking care of our amazing brains.
+
+Everyone's learning journey is unique, and I want to make sure we explore what's most meaningful for you.
+
+Help me understand - what brings you to want to learn about brain health today?`,
+                    [
+                        "→ I have specific questions or concerns",
+                        "→ I want to create a personalized learning plan",
+                        "→ Someone suggested I learn more about it",
+                        "→ I have documents or information to understand",
+                        "→ I'm curious about keeping my brain healthy as I age"
+                    ]
+                );
+                return;
+            }
+
+            // Handle brain health learning choices
+            if (currentPhase === "brain_health_learning") {
+                if (lowerMessage.includes('specific questions') || lowerMessage.includes('concerns')) {
+                    showBotMessage(
+                        `I'm here to help answer your questions! No question is too small or too big.
+
+What would you like to know about? You can ask me anything - from how the brain works, to practical tips for daily life, to understanding changes you might be experiencing.
+
+What's on your mind?`
+                    );
+                    currentPhase = "brain_health_q_and_a";
+                    return;
+                }
+                
+                if (lowerMessage.includes('learning plan') || lowerMessage.includes('personalized learning')) {
+                    let learningMessage = `Let's create a learning plan that fits your life and interests! `;
+                    
+                    // Personalize based on About Me data
+                    if (userHistory.aboutMe.bestLifeElements.length > 0) {
+                        learningMessage += `Since ${userHistory.aboutMe.bestLifeElements[0].element.toLowerCase()} is important to you, we can focus on brain health topics that support this.\n\n`;
+                    }
+                    
+                    learningMessage += `A good learning plan covers different areas. Which of these interest you most? (We'll explore them one at a time):`;
+                    
+                    showBotMessage(learningMessage, [
+                        "→ Memory and thinking skills",
+                        "→ Physical health and the brain",
+                        "→ Emotional wellbeing",
+                        "→ Social connections and brain health",
+                        "→ Nutrition for the brain",
+                        "→ Sleep and brain recovery"
+                    ]);
+                    currentPhase = "learning_plan_topics";
+                    return;
+                }
+                
+                if (lowerMessage.includes('someone suggested') || lowerMessage.includes('suggested i learn')) {
+                    let supportiveResponse = `It's wonderful that someone cares about your brain health! Sometimes others notice things we might miss, or they might have learned something they want to share with you.\n\n`;
+                    
+                    if (userHistory.aboutMe.concerns.length > 0) {
+                        supportiveResponse += `I see that you've mentioned concerns about ${userHistory.aboutMe.concerns[0].concern.toLowerCase()}. Could this be related to why they suggested learning more?\n\n`;
+                    }
+                    
+                    supportiveResponse += `Would you like to share what prompted their suggestion? This can help me tailor our learning to what matters most to you.`;
+                    
+                    showBotMessage(supportiveResponse);
+                    currentPhase = "brain_health_prompted_learning";
+                    return;
+                }
+                
+                if (lowerMessage.includes('documents') || lowerMessage.includes('information to understand')) {
+                    showBotMessage(
+                        `I'd be happy to help you understand any brain health information you have!
+
+You can upload documents using the 📄 button at the bottom right of your screen. I can help explain:
+
+- Medical reports or test results
+- Articles about brain health
+- Information from your doctor
+- Research or news you've found
+- Educational materials
+
+Once you upload something, I'll break it down into clear, understandable pieces and answer any questions you have about it.
+
+What kind of information would you like help understanding?`
+                    );
+                    currentPhase = "brain_health_document_review";
+                    return;
+                }
+                
+                if (lowerMessage.includes('curious') || lowerMessage.includes('keeping my brain healthy')) {
+                    showBotMessage(
+                        `Your curiosity is one of the best things for your brain! Being proactive about brain health is like tending a garden - the care you give it today helps it flourish tomorrow.
+
+Let's start with what interests you most about brain health:
+
+- How your daily habits affect your brain
+- Simple changes that make a big difference  
+- Understanding how the brain ages
+- Fun facts about your amazing brain
+- Practical tips you can use right away
+
+What sounds most interesting to you?`,
+                        [
+                            "→ Daily habits that help my brain",
+                            "→ Simple changes I can make",
+                            "→ How aging affects the brain",
+                            "→ Amazing brain facts",
+                            "→ Practical tips for today"
+                        ]
+                    );
+                    currentPhase = "brain_health_exploration";
+                    return;
+                }
+            }
+
+            // Handle open-ended brain health questions
+            if (currentPhase === "brain_health_q_and_a") {
+                // Store the question for context
+                logEducationTopic(`brain_health_question: ${message}`);
+                
+                // Provide personalized response based on question type
+                let response = `That's a great question about ${detectBrainHealthTopic(message)}!\n\n`;
+                
+                // Add personalized context if available
+                if (userHistory.aboutMe.bestLifeElements.length > 0) {
+                    response += `Let me explain this in a way that connects to what matters to you...\n\n`;
+                }
+                
+                // For now, acknowledge and offer to explore
+                response += `This is an important topic. Would you like me to:`;
+                
+                showBotMessage(response, [
+                    "→ Give you a simple explanation",
+                    "→ Share practical tips you can use",
+                    "→ Explain the science behind it",
+                    "→ Connect it to your daily life"
+                ]);
+                
+                currentPhase = "brain_health_answer_type";
                 return;
             }
 
