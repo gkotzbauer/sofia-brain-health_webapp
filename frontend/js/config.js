@@ -1,7 +1,7 @@
 // Sofia Frontend Configuration
 const SofiaConfig = {
     // API Configuration
-    API_BASE_URL: 'https://your-render-app-name.onrender.com/api', // Replace with your actual Render app URL
+    API_BASE_URL: 'https://sofia-backend-o6jq.onrender.com/api', // Your actual Render app URL
     
     // App Configuration
     APP_NAME: 'Sofia Brain Health Companion',
