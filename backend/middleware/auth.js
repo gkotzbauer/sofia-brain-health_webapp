@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const authMiddleware = async (req, res, next) => {
+const authenticateToken = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
         
@@ -14,7 +14,7 @@ const authMiddleware = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
             
             // Get user from database
-            const result = await req.db.query(
+            const result = await req.pool.query(
                 'SELECT id, name, age FROM users WHERE id = $1 AND is_active = true',
                 [decoded.userId]
             );
@@ -33,4 +33,4 @@ const authMiddleware = async (req, res, next) => {
     }
 };
 
-module.exports = authMiddleware;
+module.exports = { authenticateToken };

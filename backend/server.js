@@ -10,7 +10,7 @@ require('dotenv').config();
 // Import middleware
 const { authenticateToken } = require('./middleware/auth');
 const { auditLog, auditMiddleware } = require('./middleware/audit');
-const { errorHandler } = require('./middleware/errorHandler');
+const errorHandler = require('./middleware/errorHandler').errorHandler;
 
 // Import routes
 const authRoutes = require('./routes/auth');

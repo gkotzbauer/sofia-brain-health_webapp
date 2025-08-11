@@ -2,8 +2,8 @@ const errorHandler = (err, req, res, next) => {
     console.error('Error:', err);
     
     // Log error to database
-    if (req.db) {
-        req.db.query(`
+    if (req.pool) {
+        req.pool.query(`
             INSERT INTO audit_log (user_id, action, resource_type, metadata)
             VALUES ($1, 'error', 'system', $2)
         `, [
@@ -28,4 +28,4 @@ const errorHandler = (err, req, res, next) => {
     });
 };
 
-module.exports = errorHandler;
+module.exports = { errorHandler };
