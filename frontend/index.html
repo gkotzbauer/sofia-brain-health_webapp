@@ -2139,6 +2139,34 @@ Would you like to update what brings meaning to your life?`,
             currentPhase = "about_me_review";
         }
 
+        // Detect potential conflicts between user input and About Me profile
+        function detectAboutMeConflict(userMessage) {
+            const lowerMessage = userMessage.toLowerCase();
+            
+            // Check if user mentions something that conflicts with their values
+            if (userHistory.aboutMe && userHistory.aboutMe.bestLifeElements.length > 0) {
+                // Example: User values independence but talks about needing constant help
+                const valuesIndependence = userHistory.aboutMe.bestLifeElements.some(e => 
+                    e.element.toLowerCase().includes('independent') || 
+                    e.element.toLowerCase().includes('on my own')
+                );
+                
+                if (valuesIndependence && 
+                    (lowerMessage.includes("can't do anything") || 
+                     lowerMessage.includes("need help with everything") ||
+                     lowerMessage.includes("completely dependent"))) {
+                    
+                    return {
+                        hasConflict: true,
+                        type: 'independence',
+                        message: `I notice this seems different from your value of independence. Has something changed, or would you like to talk about finding a balance?`
+                    };
+                }
+            }
+            
+            return { hasConflict: false };
+        }
+
         function updateAboutMeCompleteness() {
             let completeness = 0;
             if (userHistory.aboutMe.bestLifeElements.length > 0) completeness += 40;
@@ -3989,10 +4017,13 @@ Shall we explore what makes life meaningful for you?`,
                         greeting += "\n\nWhat would you like to focus on today?";
 
                         showBotMessage(greeting, [
-                            "→ Continue my current quest",
-                            "→ Begin a new chapter",
-                            "→ Reflect on my journey",
-                            "→ Update what matters to me"
+                            "→ Continue working to define my goals or life chapters",
+                            "→ Begin working to define my goals or a new chapter",
+                            "→ Reflect on my journey, document my progress, or update my health numbers",
+                            "→ Prepare for a visit with my doctor",
+                            "→ Discuss what my doctor told me or the information they gave me",
+                            "→ Update what matters to me",
+                            "→ Something else - enter what you would like to do in the message box below"
                         ]);
                         
                         currentPhase = "main_conversation";
@@ -4502,8 +4533,9 @@ What would you like to explore first?`,
                 return;
             }
             
-            // Continue my current quest
-            if (lowerMessage.includes('continue my current quest') || lowerMessage.includes('current quest')) {
+            // Continue working to define my goals or life chapters (was "Continue my current quest")
+            if (lowerMessage.includes('continue working to define my goals') || 
+                lowerMessage.includes('goals or life chapters')) {
                 const activeGoals = userHistory.goals.filter(g => g.status === 'active');
                 if (activeGoals.length > 0) {
                     let questMessage = `Your current quest: "${activeGoals[0].goal}"`;
@@ -4521,36 +4553,63 @@ What would you like to explore first?`,
                         "→ Seek wisdom for the journey",
                         "→ Adjust my quest parameters"
                     ]);
-                }
-                return;
-            }
-            
-            // Begin a new chapter
-            if (lowerMessage.includes('begin a new chapter') || lowerMessage.includes('new chapter')) {
-                currentPhase = "chapter_creation";
-                
-                let chapterPrompt = `A new chapter awaits. Every story needs its turning points - moments where the hero chooses a new direction.`;
-                
-                // Add About Me context
-                if (userHistory.aboutMe.bestLifeElements.length > 0) {
-                    chapterPrompt += `\n\nConsidering what matters most to you - ${userHistory.aboutMe.bestLifeElements.slice(0, 2).map(e => e.element).join(' and ')} - what calls to you in this moment?`;
                 } else {
-                    chapterPrompt += `\n\nWhat calls to you in this moment of your journey?`;
+                    showBotMessage(
+                        `I see you're ready to define meaningful goals for your journey. Let's create something that truly matters to you.
+
+What area of your life would you like to focus on?`,
+                        [
+                            "→ Physical health and movement",
+                            "→ Mental clarity and memory",
+                            "→ Social connections",
+                            "→ Daily independence",
+                            "→ Something specific to me"
+                        ]
+                    );
+                    currentPhase = "goal_definition";
                 }
-                
-                showBotMessage(chapterPrompt, [
-                    "→ The Path of Movement (Physical activity)",
-                    "→ The Garden of Rest (Sleep improvement)",
-                    "→ The Circle of Connection (Social engagement)",
-                    "→ The Temple of Learning (Mental stimulation)",
-                    "→ The Valley of Calm (Stress management)"
-                ]);
                 return;
             }
             
-            // Reflect on my journey
-            if (lowerMessage.includes('reflect on my journey') || lowerMessage.includes('journey')) {
-                showProgressSummary();
+            // Begin working to define my goals or a new chapter (was "Begin a new chapter")
+            if (lowerMessage.includes('begin working to define my goals') || 
+                lowerMessage.includes('goals or a new chapter')) {
+                currentPhase = "chapter_or_goal_choice";
+                
+                showBotMessage(
+                    `Every journey needs both direction and story. Would you like to:
+
+- Set a new goal to guide your path forward
+- Create a story chapter to capture a meaningful moment
+- Both - set a goal and tell its story
+
+What calls to you right now?`,
+                    [
+                        "→ Set a new goal",
+                        "→ Create a story chapter",
+                        "→ Both - goal and chapter",
+                        "→ Tell me more about each"
+                    ]
+                );
+                return;
+            }
+            
+            // Reflect on my journey, document my progress, or update my health numbers
+            if (lowerMessage.includes('reflect on my journey') || 
+                lowerMessage.includes('document my progress') ||
+                lowerMessage.includes('update my health numbers')) {
+                currentPhase = "reflection_choice";
+                
+                showBotMessage(
+                    `Reflection is a powerful tool for growth. What would you like to focus on?`,
+                    [
+                        "→ Review my overall journey",
+                        "→ Document recent progress",
+                        "→ Update my health numbers",
+                        "→ See patterns in my story",
+                        "→ Celebrate achievements"
+                    ]
+                );
                 return;
             }
             
