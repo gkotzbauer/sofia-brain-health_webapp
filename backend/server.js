@@ -119,6 +119,29 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
+// Root endpoint - API information
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Sofia Brain Health Companion API',
+    version: '1.0.0',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/users/auth',
+      users: '/api/users/*',
+      sessions: '/api/sessions/*',
+      documents: '/api/document-uploads/*',
+      safety: '/api/safety-events/*',
+      feedback: '/api/feedback/*',
+      goals: '/api/goals/*',
+      chapters: '/api/story-chapters/*',
+      admin: '/api/admin/*'
+    },
+    documentation: 'This is a backend API server. Use the endpoints above to interact with the Sofia Brain Health Companion application.'
+  });
+});
+
 // API Routes
 app.use('/api', authRoutes); // Unauthenticated auth routes
 app.use('/api/users', authenticateToken, userRoutes);
