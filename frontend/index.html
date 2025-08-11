@@ -1401,6 +1401,12 @@
             }
         };
 
+        // Remove markdown formatting from bot messages
+        function cleanBotMessage(message) {
+            // Remove ** markdown bold formatting
+            return message.replace(/\*\*/g, '');
+        }
+
         // Story Moment Recognition Patterns
         const storyMomentPatterns = {
             emotionalTransitions: [
@@ -4071,6 +4077,9 @@ To start, may I know your name?`
         function showBotMessage(message, options = [], isStoryMoment = false, isAboutMe = false) {
             showTypingIndicator();
             
+            // Clean the message of markdown formatting
+            message = cleanBotMessage(message);
+            
             setTimeout(() => {
                 hideTypingIndicator();
                 const chatContainer = document.getElementById('chatContainer');
@@ -4691,21 +4700,22 @@ Shall we explore what matters most to you?`,
             // Prepare for a visit with my doctor
             if (lowerMessage.includes('prepare for a visit') || 
                 lowerMessage.includes('visit with my doctor')) {
-                currentPhase = "doctor_visit_prep";
+                currentPhase = "doctor_visit_type";
                 
                 showBotMessage(
-                    `I'd love to help you feel prepared and confident for your doctor's visit, ${userHistory.profile.name}.
+                    `I'd be happy to help you prepare for your doctor's visit, ${userHistory.profile.name}. 
 
-I can support you in several ways:
+First, so I can provide the most helpful guidance, could you tell me:
 
-- **Think through questions** your doctor might ask, so you're ready with clear answers
-- **Create a list of questions** you want to ask - you can take this list with you
-- **Build an 'About Me Card'** that captures what matters most to you, ensuring your care aligns with your values and circumstances
-
-Before we begin, may I ask: On a scale of 1-10, how confident do you feel about communicating what matters most to you during medical visits?
-
-(1 = Very nervous, 10 = Completely confident)`,
-                    []
+What type of doctor are you seeing?`,
+                    [
+                        "→ Primary care doctor",
+                        "→ Neurologist",
+                        "→ Cardiologist", 
+                        "→ Mental health provider",
+                        "→ Specialist (other)",
+                        "→ Not sure of the type"
+                    ]
                 );
                 return;
             }
@@ -4827,6 +4837,20 @@ How would you like to strengthen your connections?`,
                 }
             }
 
+            // Handle "Other" option
+            if (lowerMessage.includes('other') && lowerMessage.includes('enter what you')) {
+                currentPhase = "custom_input";
+                
+                showBotMessage(
+                    `Perfect! I'm here to support whatever is on your mind.
+
+Please share what you'd like to explore or discuss. Whether it's a specific concern, a question about brain health, or anything else that matters to you - I'm listening with full attention.
+
+What would you like to focus on?`
+                );
+                return;
+            }
+
             // Begin a new chapter
             if (lowerMessage.includes('begin a new chapter') || lowerMessage.includes('new chapter')) {
                 currentPhase = "chapter_creation";
@@ -4851,6 +4875,122 @@ How would you like to strengthen your connections?`,
                     "→ Other - enter what you'd like to do in the message box below"
                 ]);
                 return;
+            }
+
+            // Handle doctor type selection
+            if (currentPhase === "doctor_visit_type") {
+                let doctorType = "";
+                
+                if (lowerMessage.includes('primary care')) {
+                    doctorType = "primary care doctor";
+                } else if (lowerMessage.includes('neurologist')) {
+                    doctorType = "neurologist";
+                } else if (lowerMessage.includes('cardiologist')) {
+                    doctorType = "cardiologist";
+                } else if (lowerMessage.includes('mental health')) {
+                    doctorType = "mental health provider";
+                } else if (lowerMessage.includes('specialist') || lowerMessage.includes('other')) {
+                    showBotMessage(
+                        `Please type the kind of specialist you're seeing (for example: endocrinologist, rheumatologist, etc.):`
+                    );
+                    currentPhase = "doctor_visit_specialist_type";
+                    return;
+                } else if (lowerMessage.includes('not sure')) {
+                    doctorType = "doctor";
+                } else {
+                    doctorType = message; // Use what they typed
+                }
+                
+                // Store doctor type for context
+                userHistory.currentDoctorVisit = { type: doctorType };
+                saveUserHistory();
+                
+                currentPhase = "doctor_visit_focus";
+                
+                showBotMessage(
+                    `Thank you. Now, is there something specific you'd like help with for your ${doctorType} visit?`,
+                    [
+                        "→ Questions they might ask me",
+                        "→ Questions I should ask them", 
+                        "→ Explaining my symptoms clearly",
+                        "→ Discussing treatment options",
+                        "→ Understanding my test results",
+                        "→ General visit preparation"
+                    ]
+                );
+                return;
+            }
+
+            // Handle doctor visit focus selection
+            if (currentPhase === "doctor_visit_focus") {
+                const doctorType = userHistory.currentDoctorVisit?.type || "doctor";
+                
+                if (lowerMessage.includes('questions they might ask')) {
+                    let questionsMessage = `Here are common questions a ${doctorType} might ask:\n\n`;
+                    
+                    // Customize questions based on doctor type
+                    if (doctorType === "neurologist") {
+                        questionsMessage += `1. "When did you first notice these symptoms?"\n`;
+                        questionsMessage += `2. "Have you noticed any changes in your memory or thinking?"\n`;
+                        questionsMessage += `3. "Any headaches, dizziness, or balance issues?"\n`;
+                        questionsMessage += `4. "Has anyone in your family had similar issues?"\n`;
+                    } else if (doctorType === "primary care doctor") {
+                        questionsMessage += `1. "What brings you in today?"\n`;
+                        questionsMessage += `2. "How long has this been going on?"\n`;
+                        questionsMessage += `3. "How is this affecting your daily life?"\n`;
+                        questionsMessage += `4. "What medications are you currently taking?"\n`;
+                    } else if (doctorType === "mental health provider") {
+                        questionsMessage += `1. "How have you been feeling lately?"\n`;
+                        questionsMessage += `2. "What changes have you noticed in your mood or thoughts?"\n`;
+                        questionsMessage += `3. "How is your sleep and appetite?"\n`;
+                        questionsMessage += `4. "What support do you have at home?"\n`;
+                    } else {
+                        // Generic questions
+                        questionsMessage += `1. "What concerns brought you here today?"\n`;
+                        questionsMessage += `2. "When did you first notice these issues?"\n`;
+                        questionsMessage += `3. "What makes it better or worse?"\n`;
+                        questionsMessage += `4. "How is this impacting your quality of life?"\n`;
+                    }
+                    
+                    if (userHistory.aboutMe.bestLifeElements.length > 0) {
+                        questionsMessage += `\nRemember, you can relate your answers to what matters most to you - like ${userHistory.aboutMe.bestLifeElements[0].element.toLowerCase()}.`;
+                    }
+                    
+                    questionsMessage += `\n\nWould you like to practice answering any of these?`;
+                    
+                    showBotMessage(questionsMessage, [
+                        "→ Practice my answers",
+                        "→ Create a symptoms timeline",
+                        "→ List my current medications",
+                        "→ Move on to my questions for them"
+                    ]);
+                    
+                    currentPhase = "doctor_questions_practice";
+                    return;
+                }
+                
+                if (lowerMessage.includes('questions i should ask')) {
+                    let suggestedQuestions = `Here are important questions to ask your ${doctorType}:\n\n`;
+                    
+                    // Customize based on doctor type
+                    if (doctorType === "neurologist") {
+                        suggestedQuestions += `• What exactly is happening in my brain?\n`;
+                        suggestedQuestions += `• What tests do you recommend and why?\n`;
+                        suggestedQuestions += `• What are the treatment options?\n`;
+                        suggestedQuestions += `• How might this progress over time?\n`;
+                    } else {
+                        suggestedQuestions += `• What is causing my symptoms?\n`;
+                        suggestedQuestions += `• What are my treatment options?\n`;
+                        suggestedQuestions += `• What are the risks and benefits?\n`;
+                        suggestedQuestions += `• What happens if we do nothing?\n`;
+                    }
+                    
+                    suggestedQuestions += `\nLet's create your personal list. What's your biggest question or concern?`;
+                    
+                    showBotMessage(suggestedQuestions);
+                    currentPhase = "building_question_list";
+                    return;
+                }
             }
 
             // Handle doctor visit preparation confidence response
