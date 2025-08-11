@@ -2,13 +2,13 @@ databases:
   - name: sofia-db
     databaseName: sofia_db
     user: sofia
-    plan: free  # Changed from 'starter' to 'free'
+    plan: free
     
 services:
   - type: web
     name: sofia-backend
     runtime: node
-    plan: free  # Changed from 'starter' to 'free'
+    plan: free
     buildCommand: cd backend && npm install
     startCommand: cd backend && node server.js
     envVars:
@@ -23,7 +23,7 @@ services:
       - key: ENCRYPTION_KEY
         generateValue: true
       - key: CORS_ORIGIN
-        value: https://your-frontend-domain.com
+        value: https://sofia-frontend.onrender.com
       - key: PORT
         value: 10000
     healthCheckPath: /api/health
@@ -31,7 +31,7 @@ services:
   - type: web
     name: sofia-frontend
     runtime: static
-    plan: free  # Added explicit free plan
+    # NO PLAN FIELD FOR STATIC SITES - they're always free
     buildCommand: echo "No build needed"
     staticPublishPath: ./frontend
     routes:
