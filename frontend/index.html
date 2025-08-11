@@ -3894,11 +3894,20 @@ Would you like to:`,
 
             setTimeout(async () => {
                 if (isReturningUser && userHistory.profile.name) {
-                    // Check if About Me profile is complete
-                    if (!isAboutMeComplete || userHistory.aboutMe.profileCompleteness < 100) {
-                        // Returning user but incomplete About Me
+                    // Check if About Me profile has actual data (not just initialized)
+                    const hasCompleteBestLife = userHistory.aboutMe?.bestLifeElements?.length > 0;
+                    const hasCompleteConcerns = userHistory.aboutMe?.concerns?.length > 0;
+                    const hasConfidenceLevel = userHistory.aboutMe?.confidenceLevel;
+                    
+                    // Calculate actual completeness
+                    const actualCompleteness = (hasCompleteBestLife ? 40 : 0) + 
+                                             (hasCompleteConcerns ? 40 : 0) + 
+                                             (hasConfidenceLevel ? 20 : 0);
+                    
+                    if (actualCompleteness === 0) {
+                        // First time or incomplete About Me
                         showBotMessage(
-                            `Welcome back, ${userHistory.profile.name}! Before we continue your brain health story, I'd love to understand more about what matters most to you.
+                            `Welcome back, ${userHistory.profile.name}! I notice we haven't explored what matters most to you yet.
 
 This helps me provide support that's truly aligned with your values and concerns. It will only take a few moments.
 
@@ -3915,31 +3924,32 @@ Shall we explore what makes life meaningful for you?`,
                         let greeting = `Welcome back to your story, ${userHistory.profile.name}! `;
 
                         if (daysSinceLastVisit === 0) {
-                            greeting += "You've returned to continue writing today's chapter. ";
+                            greeting += "Continuing where we left off... ";
                         } else if (daysSinceLastVisit === 1) {
-                            greeting += "Yesterday's chapter has ended, and today brings new possibilities. ";
+                            greeting += "It's been a day since your last chapter. ";
                         } else {
-                            greeting += `${daysSinceLastVisit} days have passed, each one adding depth to your journey. `;
+                            greeting += `It's been ${daysSinceLastVisit} days since we last connected. `;
                         }
 
-                        // Reference About Me priorities
-                        if (userHistory.aboutMe.bestLifeElements.length > 0) {
-                            greeting += `\n\nI remember that ${userHistory.aboutMe.bestLifeElements[0].element.toLowerCase()} is important to you. `;
+                        // Reference their existing About Me priorities
+                        greeting += `\n\nI remember that ${userHistory.aboutMe.bestLifeElements[0].element.toLowerCase()} is important to you`;
+                        if (userHistory.aboutMe.concerns.length > 0) {
+                            greeting += `, and you're working on managing ${userHistory.aboutMe.concerns[0].concern.toLowerCase()}.`;
+                        } else {
+                            greeting += '.';
                         }
 
-                        // Reference story progress
-                        if (userHistory.storyChapters.length > 0) {
+                        // Check for active goals or chapters
+                        const activeGoals = userHistory.goals.filter(g => g.status === 'active');
+                        if (activeGoals.length > 0) {
+                            greeting += `\n\nYour current quest: "${activeGoals[0].goal}"`;
+                            currentPhase = "goal_checkin";
+                        } else if (userHistory.storyChapters.length > 0) {
                             const lastChapter = userHistory.storyChapters[userHistory.storyChapters.length - 1];
-                            greeting += `Your last chapter, "${lastChapter.title}," showed remarkable growth. `;
+                            greeting += `\n\nYour last chapter, "${lastChapter.title}," was a powerful moment in your journey.`;
                         }
 
-                        if (userHistory.goals.length > 0) {
-                            const activeGoals = userHistory.goals.filter(g => g.status === 'active');
-                            if (activeGoals.length > 0) {
-                                greeting += `You're currently working on "${activeGoals[0].goal}" - how has this quest been unfolding?`;
-                                currentPhase = "goal_checkin";
-                            }
-                        }
+                        greeting += "\n\nWhat would you like to focus on today?";
 
                         showBotMessage(greeting, [
                             "→ Continue my current quest",
@@ -3947,9 +3957,11 @@ Shall we explore what makes life meaningful for you?`,
                             "→ Reflect on my journey",
                             "→ Update what matters to me"
                         ]);
+                        
+                        currentPhase = "main_conversation";
                     }
                 } else {
-                    // New user - narrative introduction with About Me focus
+                    // New user - narrative introduction
                     showBotMessage(
                         `Welcome, brave soul. I'm Sofia, your guide in the adventure of brain health.
 
