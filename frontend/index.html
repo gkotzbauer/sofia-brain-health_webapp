@@ -2102,6 +2102,43 @@
             }
         }
 
+        // Smart About Me update - only ask when needed
+        function shouldUpdateAboutMe() {
+            if (!userHistory.aboutMe) return true;
+            
+            // Check if it's been over 30 days since last update
+            const lastUpdate = userHistory.aboutMe.lastUpdated;
+            if (lastUpdate) {
+                const daysSinceUpdate = Math.floor((new Date() - new Date(lastUpdate)) / (1000 * 60 * 60 * 24));
+                if (daysSinceUpdate > 30) {
+                    return true;
+                }
+            }
+            
+            // Check if user has achieved multiple goals (life circumstances may have changed)
+            const completedGoals = userHistory.goals.filter(g => g.status === 'completed').length;
+            if (completedGoals > 3 && !userHistory.aboutMe.recentlyReviewed) {
+                return true;
+            }
+            
+            return false;
+        }
+
+        // Function to handle periodic About Me reviews
+        function promptAboutMeReview() {
+            showBotMessage(
+                `It's been a while since we reviewed what matters most to you. Life changes, and so might your priorities.
+
+Would you like to update what brings meaning to your life?`,
+                [
+                    "→ Yes, let's review my priorities",
+                    "→ No, they're still the same",
+                    "→ Remind me next month"
+                ]
+            );
+            currentPhase = "about_me_review";
+        }
+
         function updateAboutMeCompleteness() {
             let completeness = 0;
             if (userHistory.aboutMe.bestLifeElements.length > 0) completeness += 40;
