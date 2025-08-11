@@ -4468,7 +4468,37 @@ What would you like to explore first?`,
             
             // Update what matters to me
             if (lowerMessage.includes('update what matters')) {
-                openAboutMeEditor();
+                currentPhase = "about_me_update";
+                
+                // Show current values
+                let currentStatus = `Here's what I currently know about what matters to you:\n\n`;
+                
+                if (userHistory.aboutMe.bestLifeElements.length > 0) {
+                    currentStatus += `**What brings you joy:**\n`;
+                    userHistory.aboutMe.bestLifeElements.forEach(element => {
+                        currentStatus += `• ${element.element}\n`;
+                    });
+                }
+                
+                if (userHistory.aboutMe.concerns.length > 0) {
+                    currentStatus += `\n**Your concerns:**\n`;
+                    userHistory.aboutMe.concerns.forEach(concern => {
+                        currentStatus += `• ${concern.concern}\n`;
+                    });
+                }
+                
+                currentStatus += `\n**Confidence level:** ${userHistory.aboutMe.confidenceLevel || 'Not set'}`;
+                
+                showBotMessage(
+                    currentStatus + `\n\nWhat would you like to update?`,
+                    [
+                        "→ Add new things that bring me joy",
+                        "→ Remove something that no longer matters",
+                        "→ Update my concerns",
+                        "→ Change my confidence level",
+                        "→ Keep everything as is"
+                    ]
+                );
                 return;
             }
             
