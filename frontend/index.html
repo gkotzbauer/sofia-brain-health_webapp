@@ -6322,13 +6322,7 @@ Given what we've discussed, how confident are you that you can address these con
                     confidence: 0.95,
                     reason: 'user_wants_relationship_help'
                 },
-                // Learn about brain health
-                {
-                    pattern: /(?:learn|find\s+out|understand|know\s+more)\s+(?:about\s+)?(?:brain\s+)?(?:health|wellness|function)/i,
-                    topic: 'brain_health_learning',
-                    confidence: 0.95,
-                    reason: 'educational_interest'
-                },
+                // REMOVED: Learn about brain health - Now handled by goal-oriented conversation flow
                 // Brain health basics (from answer options)
                 {
                     pattern: /(?:tell\s+me\s+about\s+)?(?:brain\s+)?(?:health\s+)?(?:basics|fundamentals|essentials)/i,
@@ -6705,15 +6699,7 @@ Given what we've discussed, how confident are you that you can address these con
                         "→ Discuss how you're feeling about the information"
                     ]
                 },
-                brain_health_learning: {
-                    message: `Wonderful! Learning about brain health is such an important part of taking care of yourself. I'd love to share some insights and help you understand how your brain works.`,
-                    options: [
-                        "→ Tell me about brain health basics",
-                        "→ Learn about memory and cognitive function",
-                        "→ Explore brain-healthy lifestyle habits",
-                        "→ Discuss specific brain health concerns"
-                    ]
-                },
+                // REMOVED: brain_health_learning - Now handled by goal-oriented conversation flow
                 brain_health_basics: {
                     message: `Great choice! Let me share the fundamentals of brain health with you. Your brain is like a supercomputer that needs the right fuel, rest, and stimulation to work at its best.`,
                     options: [
