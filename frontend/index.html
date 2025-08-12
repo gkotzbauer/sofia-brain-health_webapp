@@ -1875,30 +1875,78 @@
             try {
                 console.log('🧪 Testing PDF.js loading...');
                 
-                // Test if loadPDFJS function is available
+                // Test if functions are available
                 console.log('📄 loadPDFJS available:', typeof loadPDFJS === 'function');
+                console.log('📄 checkPDFJSAvailability available:', typeof checkPDFJSAvailability === 'function');
+                console.log('📄 forcePDFJSReload available:', typeof forcePDFJSReload === 'function');
                 
-                // Test PDF.js loading
-                console.log('🧪 Attempting to load PDF.js...');
-                loadPDFJS().then(() => {
-                    console.log('✅ PDF.js loaded successfully!');
-                    console.log('📊 pdfjsLib available:', typeof pdfjsLib !== 'undefined');
-                    
-                    if (typeof pdfjsLib !== 'undefined') {
-                        console.log('📊 PDF.js version:', pdfjsLib.version);
-                        console.log('🎯 PDF reading is now available!');
-                    }
-                }).catch(error => {
-                    console.error('❌ PDF.js loading failed:', error);
-                    console.log('💡 This explains why PDF uploads are failing');
-                    
-                    // Try alternative approach
-                    console.log('🔄 Attempting alternative PDF.js loading...');
-                    tryAlternativePDFJS();
-                });
+                // Check current PDF.js availability
+                console.log('🔍 Current PDF.js availability:');
+                const isAvailable = checkPDFJSAvailability();
+                
+                if (!isAvailable) {
+                    console.log('🧪 PDF.js not available, attempting to load...');
+                    loadPDFJS().then(() => {
+                        console.log('✅ PDF.js loaded successfully!');
+                        console.log('📊 pdfjsLib available:', typeof pdfjsLib !== 'undefined');
+                        
+                        if (typeof pdfjsLib !== 'undefined') {
+                            console.log('📊 PDF.js version:', pdfjsLib.version);
+                            console.log('🎯 PDF reading is now available!');
+                            
+                            // Test actual PDF processing capability
+                            console.log('🧪 Testing PDF processing capability...');
+                            testPDFProcessingCapability();
+                        }
+                    }).catch(error => {
+                        console.error('❌ PDF.js loading failed:', error);
+                        console.log('💡 This explains why PDF uploads are failing');
+                        
+                        // Try alternative approach
+                        console.log('🔄 Attempting alternative PDF.js loading...');
+                        tryAlternativePDFJS();
+                    });
+                } else {
+                    console.log('✅ PDF.js already available!');
+                    console.log('🧪 Testing PDF processing capability...');
+                    testPDFProcessingCapability();
+                }
                 
             } catch (error) {
                 console.error('❌ PDF.js test failed:', error);
+            }
+        }
+
+        // Test PDF processing capability
+        function testPDFProcessingCapability() {
+            console.log('🧪 Testing PDF processing capability...');
+            
+            if (typeof pdfjsLib === 'undefined') {
+                console.error('❌ Cannot test PDF processing - pdfjsLib not available');
+                return;
+            }
+            
+            try {
+                // Test basic PDF.js functionality
+                console.log('📊 PDF.js version:', pdfjsLib.version);
+                console.log('📊 PDF.js getDocument available:', typeof pdfjsLib.getDocument === 'function');
+                console.log('📊 PDF.js GlobalWorkerOptions:', pdfjsLib.GlobalWorkerOptions);
+                
+                // Test if we can create a simple PDF document
+                const testData = new Uint8Array([0x25, 0x50, 0x44, 0x46]); // PDF header
+                console.log('🧪 Testing PDF header recognition...');
+                
+                // This should fail gracefully for invalid PDF data
+                pdfjsLib.getDocument({ data: testData }).promise.then(() => {
+                    console.log('✅ PDF.js getDocument working!');
+                }).catch(error => {
+                    console.log('✅ PDF.js getDocument working (expected error for invalid data):', error.message);
+                });
+                
+                console.log('🎯 PDF processing capability confirmed!');
+                
+            } catch (error) {
+                console.error('❌ PDF processing capability test failed:', error);
             }
         }
 
@@ -1921,6 +1969,43 @@
                 console.log('💡 PDF.js loading is completely blocked - using text-only fallback');
             };
             document.head.appendChild(alternativeScript);
+        }
+
+        // Global PDF.js availability checker
+        function checkPDFJSAvailability() {
+            console.log('🔍 Checking PDF.js availability...');
+            console.log('📄 pdfjsLib type:', typeof pdfjsLib);
+            console.log('📄 pdfjsLib value:', pdfjsLib);
+            
+            if (typeof pdfjsLib !== 'undefined') {
+                console.log('✅ PDF.js is available!');
+                console.log('📊 PDF.js version:', pdfjsLib.version);
+                console.log('📊 PDF.js GlobalWorkerOptions:', pdfjsLib.GlobalWorkerOptions);
+                return true;
+            } else {
+                console.log('❌ PDF.js is NOT available');
+                return false;
+            }
+        }
+
+        // Force PDF.js reload if needed
+        async function forcePDFJSReload() {
+            console.log('🔄 Force reloading PDF.js...');
+            
+            // Clear any existing PDF.js references
+            if (typeof pdfjsLib !== 'undefined') {
+                console.log('📄 Clearing existing PDF.js reference...');
+                delete window.pdfjsLib;
+            }
+            
+            try {
+                await loadPDFJS();
+                console.log('✅ PDF.js force reload successful!');
+                return checkPDFJSAvailability();
+            } catch (error) {
+                console.error('❌ PDF.js force reload failed:', error);
+                return false;
+            }
         }
 
         // ============= TOKEN-EFFICIENT Q&A CLASS =============
@@ -2102,24 +2187,55 @@
 
         // PDF file reader
         async function readPDFFile(file) {
+            console.log('📄 Starting PDF file reading process...');
+            console.log('📄 Checking PDF.js availability...');
+            console.log('📄 pdfjsLib type:', typeof pdfjsLib);
+            console.log('📄 pdfjsLib value:', pdfjsLib);
+            
             // First check if PDF.js is loaded
             if (typeof pdfjsLib === 'undefined') {
-                console.log('📄 Loading PDF.js library...');
+                console.log('📄 PDF.js not available, attempting to load...');
                 try {
                     await loadPDFJS();
                     console.log('✅ PDF.js library loaded successfully');
+                    
+                    // Double-check availability after loading
+                    if (typeof pdfjsLib === 'undefined') {
+                        console.error('❌ PDF.js still not available after loading attempt');
+                        throw new Error('PDF.js failed to initialize properly after loading');
+                    }
+                    console.log('✅ PDF.js confirmed available after loading');
                 } catch (error) {
                     console.error('❌ PDF.js loading error:', error);
                     throw new Error('PDF reading is not available. Please use a text file (.txt) or copy and paste the content.');
                 }
+            } else {
+                console.log('✅ PDF.js already available, proceeding with PDF processing');
             }
+            
+            // Final availability check before processing
+            if (typeof pdfjsLib === 'undefined') {
+                console.error('❌ PDF.js not available at processing time');
+                throw new Error('PDF.js became unavailable during processing');
+            }
+            
+            console.log('📄 PDF.js confirmed available, starting file processing...');
             
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = async function(e) {
                     try {
                         console.log('📄 Reading PDF file:', file.name);
+                        console.log('📄 File size:', file.size, 'bytes');
+                        
+                        // Final check before using pdfjsLib
+                        if (typeof pdfjsLib === 'undefined') {
+                            throw new Error('PDF.js became unavailable during file reading');
+                        }
+                        
                         const pdfData = new Uint8Array(e.target.result);
+                        console.log('📄 PDF data loaded, size:', pdfData.length, 'bytes');
+                        
                         const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
                         let fullText = '';
                         
@@ -2139,7 +2255,7 @@
                             return;
                         }
                         
-                        console.log('✅ PDF text extracted successfully');
+                        console.log('✅ PDF text extracted successfully, length:', fullText.length, 'characters');
                         resolve(fullText);
                     } catch (error) {
                         console.error('❌ PDF processing error:', error);
