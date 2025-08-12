@@ -2252,6 +2252,260 @@ Understanding the relationship between medications and brain health can help you
         // Initialize the universal conversation system
         const universalConversationManager = new ConversationFlowManager();
         
+        // ============= SMART VARIABLE CLASSIFICATION SYSTEM =============
+        // AI-powered classification and deduplication to avoid duplicate variables
+        
+        // Standardized variable categories for consistent classification
+        const VARIABLE_CATEGORIES = {
+            // Memory & Cognitive
+            MEMORY: ['memory', 'remember', 'forget', 'recall', 'cognitive', 'thinking', 'brain function'],
+            CONCENTRATION: ['concentrate', 'focus', 'attention', 'distract', 'mind wandering'],
+            LEARNING: ['learn', 'study', 'education', 'knowledge', 'understanding', 'comprehension'],
+            
+            // Health & Wellness
+            PHYSICAL_HEALTH: ['exercise', 'activity', 'fitness', 'nutrition', 'diet', 'sleep', 'rest'],
+            MENTAL_HEALTH: ['anxiety', 'depression', 'stress', 'mood', 'emotional', 'wellbeing'],
+            PREVENTION: ['prevent', 'prevention', 'maintain', 'maintenance', 'healthy habits'],
+            
+            // Support & Relationships
+            FAMILY: ['family', 'parent', 'child', 'sibling', 'relative', 'home'],
+            CAREGIVING: ['caregiver', 'care', 'support', 'help', 'assist', 'nurture'],
+            SOCIAL: ['friend', 'social', 'community', 'connection', 'relationship'],
+            
+            // Medical & Healthcare
+            MEDICAL: ['doctor', 'appointment', 'treatment', 'medication', 'diagnosis', 'test'],
+            HEALTHCARE: ['healthcare', 'medical care', 'professional help', 'therapy', 'counseling'],
+            
+            // Personal Development
+            GOALS: ['goal', 'objective', 'target', 'aim', 'aspiration', 'achievement'],
+            GROWTH: ['growth', 'improve', 'develop', 'progress', 'advance', 'evolve'],
+            SELF_IMPROVEMENT: ['self-improvement', 'personal development', 'better', 'enhance']
+        };
+        
+        // Semantic similarity function using keyword matching
+        function calculateSemanticSimilarity(text1, text2) {
+            const words1 = text1.toLowerCase().split(/\s+/);
+            const words2 = text2.toLowerCase().split(/\s+/);
+            
+            // Calculate Jaccard similarity
+            const intersection = words1.filter(word => words2.includes(word));
+            const union = [...new Set([...words1, ...words2])];
+            
+            const jaccardSimilarity = intersection.length / union.length;
+            
+            // Additional semantic matching using categories
+            let categorySimilarity = 0;
+            for (const [category, keywords] of Object.entries(VARIABLE_CATEGORIES)) {
+                const hasCategory1 = keywords.some(keyword => words1.includes(keyword));
+                const hasCategory2 = keywords.some(keyword => words2.includes(keyword));
+                if (hasCategory1 && hasCategory2) {
+                    categorySimilarity += 0.3;
+                }
+            }
+            
+            return Math.min(1.0, jaccardSimilarity + categorySimilarity);
+        }
+        
+        // Smart concern classification and deduplication
+        async function classifyAndDeduplicateConcern(concern, severity, context) {
+            const SIMILARITY_THRESHOLD = 0.6; // 60% similarity threshold
+            
+            // Check for exact matches first
+            const exactMatchIndex = userHistory.concerns.findIndex(c => 
+                c.concern.toLowerCase() === concern.toLowerCase()
+            );
+            
+            if (exactMatchIndex !== -1) {
+                return {
+                    isNew: false,
+                    existingIndex: exactMatchIndex,
+                    item: {
+                        concern: concern,
+                        timestamp: new Date().toISOString(),
+                        severity: severity,
+                        context: context,
+                        updateCount: (userHistory.concerns[exactMatchIndex].updateCount || 0) + 1
+                    }
+                };
+            }
+            
+            // Check for semantic similarity
+            let bestMatchIndex = -1;
+            let bestSimilarity = 0;
+            
+            for (let i = 0; i < userHistory.concerns.length; i++) {
+                const existingConcern = userHistory.concerns[i];
+                const similarity = calculateSemanticSimilarity(concern, existingConcern.concern);
+                
+                if (similarity > bestSimilarity && similarity >= SIMILARITY_THRESHOLD) {
+                    bestSimilarity = similarity;
+                    bestMatchIndex = i;
+                }
+            }
+            
+            if (bestMatchIndex !== -1) {
+                // Found similar concern, update it
+                return {
+                    isNew: false,
+                    existingIndex: bestMatchIndex,
+                    item: {
+                        concern: concern,
+                        timestamp: new Date().toISOString(),
+                        severity: severity,
+                        context: context,
+                        updateCount: (userHistory.concerns[bestMatchIndex].updateCount || 0) + 1
+                    }
+                };
+            }
+            
+            // New concern
+            return {
+                isNew: true,
+                item: {
+                    concern: concern,
+                    timestamp: new Date().toISOString(),
+                    severity: severity,
+                    context: context,
+                    updateCount: 1
+                }
+            };
+        }
+        
+        // Smart value classification and deduplication
+        async function classifyAndDeduplicateValue(value, importance) {
+            const SIMILARITY_THRESHOLD = 0.7; // Higher threshold for values
+            
+            // Check for exact matches first
+            const exactMatchIndex = userHistory.values.findIndex(v => 
+                v.value.toLowerCase() === value.toLowerCase()
+            );
+            
+            if (exactMatchIndex !== -1) {
+                return {
+                    isNew: false,
+                    existingIndex: exactMatchIndex,
+                    item: {
+                        value: value,
+                        timestamp: new Date().toISOString(),
+                        importance: importance,
+                        updateCount: (userHistory.values[exactMatchIndex].updateCount || 0) + 1
+                    }
+                };
+            }
+            
+            // Check for semantic similarity
+            let bestMatchIndex = -1;
+            let bestSimilarity = 0;
+            
+            for (let i = 0; i < userHistory.values.length; i++) {
+                const existingValue = userHistory.values[i];
+                const similarity = calculateSemanticSimilarity(value, existingValue.value);
+                
+                if (similarity > bestSimilarity && similarity >= SIMILARITY_THRESHOLD) {
+                    bestSimilarity = similarity;
+                    bestMatchIndex = i;
+                }
+            }
+            
+            if (bestMatchIndex !== -1) {
+                // Found similar value, update it
+                return {
+                    isNew: false,
+                    existingIndex: bestMatchIndex,
+                    item: {
+                        value: value,
+                        timestamp: new Date().toISOString(),
+                        importance: importance,
+                        updateCount: (userHistory.values[bestMatchIndex].updateCount || 0) + 1
+                    }
+                };
+            }
+            
+            // New value
+            return {
+                isNew: true,
+                item: {
+                    value: value,
+                    timestamp: new Date().toISOString(),
+                    importance: importance,
+                    updateCount: 1
+                }
+            };
+        }
+        
+        // Smart goal classification and deduplication
+        async function classifyAndDeduplicateGoal(goal, confidence, linkedBestLifeElements) {
+            const SIMILARITY_THRESHOLD = 0.65; // Medium threshold for goals
+            
+            // Check for exact matches first
+            const exactMatchIndex = userHistory.goals.findIndex(g => 
+                g.goal.toLowerCase() === goal.toLowerCase()
+            );
+            
+            if (exactMatchIndex !== -1) {
+                return {
+                    isNew: false,
+                    existingIndex: exactMatchIndex,
+                    item: {
+                        goal: goal,
+                        setDate: new Date().toISOString(),
+                        confidence: confidence,
+                        status: 'active',
+                        progress: [],
+                        linkedBestLifeElements: linkedBestLifeElements,
+                        updateCount: (userHistory.goals[exactMatchIndex].updateCount || 0) + 1
+                    }
+                };
+            }
+            
+            // Check for semantic similarity
+            let bestMatchIndex = -1;
+            let bestSimilarity = 0;
+            
+            for (let i = 0; i < userHistory.goals.length; i++) {
+                const existingGoal = userHistory.goals[i];
+                const similarity = calculateSemanticSimilarity(goal, existingGoal.goal);
+                
+                if (similarity > bestSimilarity && similarity >= SIMILARITY_THRESHOLD) {
+                    bestSimilarity = similarity;
+                    bestMatchIndex = i;
+                }
+            }
+            
+            if (bestMatchIndex !== -1) {
+                // Found similar goal, update it
+                return {
+                    isNew: false,
+                    existingIndex: bestMatchIndex,
+                    item: {
+                        goal: goal,
+                        setDate: new Date().toISOString(),
+                        confidence: confidence,
+                        status: 'active',
+                        progress: [],
+                        linkedBestLifeElements: linkedBestLifeElements,
+                        updateCount: (userHistory.goals[bestMatchIndex].updateCount || 0) + 1
+                    }
+                };
+            }
+            
+            // New goal
+            return {
+                isNew: true,
+                item: {
+                    goal: goal,
+                    setDate: new Date().toISOString(),
+                    confidence: confidence,
+                    status: 'active',
+                    progress: [],
+                    linkedBestLifeElements: linkedBestLifeElements,
+                    updateCount: 1
+                }
+            };
+        }
+        
+        // ============= END SMART VARIABLE CLASSIFICATION SYSTEM =============
+        
         // ============= BRAIN HEALTH STORY BUILDER =============
         // Functions to build brain health chapters and stories from logged user data
         
@@ -4550,15 +4804,25 @@ Remember, it's perfectly okay if you're not at a 10 - medical information can be
 
         // Enhanced logging functions with story elements
         async function logConcern(concern, severity = 'moderate', context = '') {
-            // Get previous concerns for history tracking
-            const previousConcerns = userHistory.concerns.map(c => c.concern).join(', ');
+            // SMART VARIABLE CLASSIFICATION AND DEDUPLICATION
+            const classifiedConcern = await classifyAndDeduplicateConcern(concern, severity, context);
             
-            userHistory.concerns.push({
-                concern: concern,
-                timestamp: new Date().toISOString(),
-                severity: severity,
-                context: context
-            });
+            if (classifiedConcern.isNew) {
+                // Add new concern
+                userHistory.concerns.push(classifiedConcern.item);
+                console.log('📝 Logged NEW concern:', classifiedConcern.item.concern);
+            } else {
+                // Update existing concern
+                const existingIndex = classifiedConcern.existingIndex;
+                userHistory.concerns[existingIndex] = {
+                    ...userHistory.concerns[existingIndex],
+                    ...classifiedConcern.item,
+                    updateCount: (userHistory.concerns[existingIndex].updateCount || 0) + 1,
+                    lastUpdated: new Date().toISOString()
+                };
+                console.log('📝 Updated EXISTING concern:', classifiedConcern.item.concern);
+            }
+            
             saveUserHistory();
             
             // Track in backend if available
@@ -4567,12 +4831,14 @@ Remember, it's perfectly okay if you're not at a 10 - medical information can be
                     await SofiaAPI.trackProfileChange({
                         variableName: 'concerns',
                         variableValue: concern,
-                        previousValue: previousConcerns || null,
+                        previousValue: classifiedConcern.isNew ? null : userHistory.concerns[classifiedConcern.existingIndex].concern,
                         source: context.includes('document') ? 'document' : 'conversation',
                         sourceDetails: {
                             severity: severity,
                             context: context,
-                            timestamp: new Date().toISOString()
+                            timestamp: new Date().toISOString(),
+                            isNew: classifiedConcern.isNew,
+                            updateCount: classifiedConcern.isNew ? 1 : userHistory.concerns[classifiedConcern.existingIndex].updateCount
                         }
                     });
                 } catch (error) {
@@ -4582,13 +4848,25 @@ Remember, it's perfectly okay if you're not at a 10 - medical information can be
         }
 
         async function logValue(value, importance = 'high') {
-            const previousValues = userHistory.values.map(v => v.value).join(', ');
+            // SMART VARIABLE CLASSIFICATION AND DEDUPLICATION
+            const classifiedValue = await classifyAndDeduplicateValue(value, importance);
             
-            userHistory.values.push({
-                value: value,
-                timestamp: new Date().toISOString(),
-                importance: importance
-            });
+            if (classifiedValue.isNew) {
+                // Add new value
+                userHistory.values.push(classifiedValue.item);
+                console.log('📝 Logged NEW value:', classifiedValue.item.value);
+            } else {
+                // Update existing value
+                const existingIndex = classifiedValue.existingIndex;
+                userHistory.values[existingIndex] = {
+                    ...userHistory.values[existingIndex],
+                    ...classifiedValue.item,
+                    updateCount: (userHistory.values[existingIndex].updateCount || 0) + 1,
+                    lastUpdated: new Date().toISOString()
+                };
+                console.log('📝 Updated EXISTING value:', classifiedValue.item.value);
+            }
+            
             saveUserHistory();
             
             // Track in backend if available
@@ -4597,11 +4875,13 @@ Remember, it's perfectly okay if you're not at a 10 - medical information can be
                     await SofiaAPI.trackProfileChange({
                         variableName: 'values',
                         variableValue: value,
-                        previousValue: previousValues || null,
+                        previousValue: classifiedValue.isNew ? null : userHistory.values[classifiedValue.existingIndex].value,
                         source: 'conversation',
                         sourceDetails: {
                             importance: importance,
-                            timestamp: new Date().toISOString()
+                            timestamp: new Date().toISOString(),
+                            isNew: classifiedValue.isNew,
+                            updateCount: classifiedValue.isNew ? 1 : userHistory.values[classifiedValue.existingIndex].updateCount
                         }
                     });
                 } catch (error) {
@@ -4619,16 +4899,30 @@ Remember, it's perfectly okay if you're not at a 10 - medical information can be
         }
 
         async function logGoal(goal, confidence = 7, linkedBestLifeElements = []) {
-            const previousGoals = userHistory.goals.filter(g => g.status === 'active').map(g => g.goal).join(', ');
+            // SMART VARIABLE CLASSIFICATION AND DEDUPLICATION
+            const classifiedGoal = await classifyAndDeduplicateGoal(goal, confidence, linkedBestLifeElements);
             
-            userHistory.goals.push({
-                goal: goal,
-                setDate: new Date().toISOString(),
-                confidence: confidence,
-                status: 'active',
-                progress: [],
-                linkedBestLifeElements: linkedBestLifeElements
-            });
+            if (classifiedGoal.isNew) {
+                // Add new goal
+                userHistory.goals.push(classifiedGoal.item);
+                console.log('📝 Logged NEW goal:', classifiedGoal.item.goal);
+            } else {
+                // Update existing goal
+                const existingIndex = classifiedGoal.existingIndex;
+                userHistory.goals[existingIndex] = {
+                    ...userHistory.goals[existingIndex],
+                    ...classifiedGoal.item,
+                    updateCount: (userHistory.goals[existingIndex].updateCount || 0) + 1,
+                    lastUpdated: new Date().toISOString(),
+                    // Merge linked elements
+                    linkedBestLifeElements: [...new Set([
+                        ...userHistory.goals[existingIndex].linkedBestLifeElements,
+                        ...linkedBestLifeElements
+                    ])]
+                };
+                console.log('📝 Updated EXISTING goal:', classifiedGoal.item.goal);
+            }
+            
             saveUserHistory();
             
             // Track in backend if available
@@ -4645,7 +4939,7 @@ Remember, it's perfectly okay if you're not at a 10 - medical information can be
                     await SofiaAPI.trackProfileChange({
                         variableName: 'goals',
                         variableValue: goal,
-                        previousValue: previousGoals || null,
+                        previousValue: classifiedGoal.isNew ? null : userHistory.goals[classifiedGoal.existingIndex].goal,
                         source: 'conversation',
                         sourceDetails: {
                             confidence: confidence,
@@ -5077,13 +5371,21 @@ Your feedback helps me improve. Thank you for speaking up about this.`;
             // Add concerns
             if (userHistory.concerns && userHistory.concerns.length > 0) {
                 userHistory.concerns.forEach((concern, index) => {
+                    let metadata = `Severity: ${concern.severity}`;
+                    if (concern.updateCount > 1) {
+                        metadata += ` | Updates: ${concern.updateCount}`;
+                    }
+                    if (concern.context) {
+                        metadata += ` | Context: ${concern.context}`;
+                    }
                     memoryDisplayList.push({
                         type: 'concern',
                         content: concern.concern,
-                        metadata: `Severity: ${concern.severity}`,
+                        metadata: metadata,
                         timestamp: concern.timestamp,
                         index: index,
-                        context: concern.context
+                        context: concern.context,
+                        updateCount: concern.updateCount || 1
                     });
                 });
             }
@@ -5092,8 +5394,11 @@ Your feedback helps me improve. Thank you for speaking up about this.`;
             if (userHistory.goals && userHistory.goals.length > 0) {
                 userHistory.goals.forEach((goal, index) => {
                     let metadata = `Confidence: ${goal.confidence}/10 | Status: ${goal.status}`;
+                    if (goal.updateCount > 1) {
+                        metadata += ` | Updates: ${goal.updateCount}`;
+                    }
                     if (goal.linkedBestLifeElements && goal.linkedBestLifeElements.length > 0) {
-                        metadata += ` | Supports: ${goal.linkedBestLifeElements[0]}`;
+                        metadata += ` | Supports: ${goal.linkedBestLifeElements.join(', ')}`;
                     }
                     memoryDisplayList.push({
                         type: 'goal',
@@ -5101,7 +5406,8 @@ Your feedback helps me improve. Thank you for speaking up about this.`;
                         metadata: metadata,
                         timestamp: goal.setDate,
                         index: index,
-                        progress: goal.progress
+                        progress: goal.progress,
+                        updateCount: goal.updateCount || 1
                     });
                 });
             }
@@ -5109,12 +5415,17 @@ Your feedback helps me improve. Thank you for speaking up about this.`;
             // Add values
             if (userHistory.values && userHistory.values.length > 0) {
                 userHistory.values.forEach((value, index) => {
+                    let metadata = `Importance: ${value.importance}`;
+                    if (value.updateCount > 1) {
+                        metadata += ` | Updates: ${value.updateCount}`;
+                    }
                     memoryDisplayList.push({
                         type: 'value',
                         content: value.value,
-                        metadata: `Importance: ${value.importance}`,
+                        metadata: metadata,
                         timestamp: value.timestamp,
-                        index: index
+                        index: index,
+                        updateCount: value.updateCount || 1
                     });
                 });
             }
