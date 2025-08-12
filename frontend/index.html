@@ -1781,6 +1781,44 @@
             }
         }
 
+        // Test function for document upload handler
+        function testDocumentUpload() {
+            try {
+                console.log('🧪 Testing document upload handler...');
+                
+                // Test if functions are available
+                console.log('📄 handleDocumentUpload available:', typeof handleDocumentUpload === 'function');
+                console.log('📄 handleProcessedDocument available:', typeof handleProcessedDocument === 'function');
+                console.log('📄 documentProcessor available:', typeof documentProcessor !== 'undefined');
+                
+                // Test document processor instance
+                if (documentProcessor) {
+                    console.log('✅ Document processor instance available');
+                    console.log('📊 Chunk size:', documentProcessor.chunkSize);
+                } else {
+                    console.error('❌ Document processor not available');
+                }
+                
+                // Test with sample text (simulate document processing)
+                const sampleText = "Patient diagnosed with hypertension. Prescribed Lisinopril 10mg daily.";
+                console.log('📝 Sample medical text:', sampleText);
+                
+                documentProcessor.processDocument(sampleText, "test_medical.txt").then(result => {
+                    console.log('✅ Sample document processed successfully:', result);
+                    
+                    // Test the processed document handler
+                    handleProcessedDocument(result);
+                    console.log('✅ Document handler test completed');
+                    
+                }).catch(error => {
+                    console.error('❌ Sample processing failed:', error);
+                });
+                
+            } catch (error) {
+                console.error('❌ Document upload test failed:', error);
+            }
+        }
+
         // ============= TOKEN-EFFICIENT Q&A CLASS =============
         class TokenEfficientQA {
             constructor(document) {
@@ -2047,6 +2085,123 @@
                 script.onerror = () => reject(new Error('Failed to load Mammoth.js'));
                 document.head.appendChild(script);
             });
+        }
+
+        // ============= DOCUMENT UPLOAD HANDLER =============
+        
+        // Global variables for document processing
+        const documentProcessor = new TokenEfficientDocumentProcessor();
+        let currentDocumentQA = null;
+
+        // Enhanced document upload handler
+        async function handleDocumentUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            documentProcessing = true;
+            showBotMessage("📄 I'm reading your document. This may take a moment...");
+            
+            try {
+                // Extract text based on file type
+                let extractedText = "";
+                let extractionMethod = "";
+                
+                if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+                    extractedText = await readTextFile(file);
+                    extractionMethod = 'text';
+                } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+                    extractedText = await readPDFFile(file);
+                    extractionMethod = 'pdf';
+                } else if (file.type.includes('wordprocessingml') || file.name.endsWith('.docx')) {
+                    extractedText = await readWordFile(file);
+                    extractionMethod = 'docx';
+                } else {
+                    throw new Error(`File type not supported. Please use TXT, PDF, or Word documents.`);
+                }
+                
+                if (!extractedText || extractedText.trim().length < 10) {
+                    throw new Error('Could not extract readable text from document');
+                }
+                
+                // Process document locally with token efficiency
+                const processedDoc = await documentProcessor.processDocument(extractedText, file.name);
+                
+                // Store document reference
+                userHistory.uploadedDocuments = userHistory.uploadedDocuments || [];
+                userHistory.uploadedDocuments.push({
+                    id: processedDoc.id,
+                    filename: file.name,
+                    uploadDate: new Date().toISOString(),
+                    documentType: processedDoc.extracted.documentType,
+                    hasMedialInfo: processedDoc.extracted.medications.length > 0 || 
+                                   processedDoc.extracted.conditions.length > 0
+                });
+                
+                // Store for Q&A
+                userHistory.currentDocument = processedDoc;
+                currentDocumentQA = new TokenEfficientQA(processedDoc);
+                
+                // Save to localStorage for persistence
+                localStorage.setItem(`doc_${processedDoc.id}`, JSON.stringify(processedDoc));
+                saveUserHistory();
+                
+                // Handle response based on content
+                handleProcessedDocument(processedDoc);
+                
+            } catch (error) {
+                console.error('Document processing error:', error);
+                showBotMessage(
+                    `I had trouble reading your document: ${error.message}\n\n` +
+                    `Would you like to:`,
+                    [
+                        "→ Try uploading again",
+                        "→ Type or paste the content instead",
+                        "→ Tell me what the document is about"
+                    ]
+                );
+            } finally {
+                documentProcessing = false;
+                event.target.value = ''; // Reset file input
+            }
+        }
+
+        // Handle processed document
+        function handleProcessedDocument(processedDoc) {
+            currentPhase = "document_review";
+            
+            let message = `✅ I've successfully processed your document: "${processedDoc.filename}"\n\n`;
+            
+            // Show what was found
+            message += `Here's what I found:\n`;
+            message += `• Document type: ${processedDoc.extracted.documentType.replace('_', ' ')}\n`;
+            
+            if (processedDoc.extracted.medications.length > 0) {
+                message += `• ${processedDoc.extracted.medications.length} medication${processedDoc.extracted.medications.length > 1 ? 's' : ''}\n`;
+            }
+            if (processedDoc.extracted.conditions.length > 0) {
+                message += `• ${processedDoc.extracted.conditions.length} medical condition${processedDoc.extracted.conditions.length > 1 ? 's' : ''}\n`;
+            }
+            if (processedDoc.extracted.dates.length > 0) {
+                message += `• ${processedDoc.extracted.dates.length} important date${processedDoc.extracted.dates.length > 1 ? 's' : ''}\n`;
+            }
+            
+            message += `\nI'm ready to answer questions about this document. `;
+            
+            if (processedDoc.hasMedialInfo || 
+                processedDoc.extracted.medications.length > 0 || 
+                processedDoc.extracted.conditions.length > 0) {
+                message += `\n\nBefore we begin - is this medical information about you? This helps me provide better support.`;
+                
+                showBotMessage(message, [
+                    "→ Yes, this is my medical information",
+                    "→ No, this is someone else's information",
+                    "→ I'd rather not say - just help me understand it"
+                ]);
+            } else {
+                message += `What would you like to know?`;
+                showBotMessage(message);
+                currentPhase = "document_qa";
+            }
         }
 
         // Sofia's Response Patterns - Styling Guide for Consistent Interactions
