@@ -1630,6 +1630,52 @@
                         responseType: 'medicalDecisionPreparation',
                         confidence: 0.95,
                         context: 'medical_decision_preparation_planning'
+                    },
+                    
+                    // Specific option selection patterns for concerns and goals
+                    familyHistoryConcernSelection: {
+                        triggers: [
+                            /concerned\s+about\s+family\s+history/i,
+                            /family\s+history.*genetic/i,
+                            /genetic\s+risk\s+factors/i,
+                            /family.*history/i
+                        ],
+                        responseType: 'familyHistoryConcern',
+                        confidence: 0.95,
+                        context: 'family_history_concern_planning'
+                    },
+                    
+                    earlyWarningSignsConcernSelection: {
+                        triggers: [
+                            /experiencing\s+early\s+warning\s+signs/i,
+                            /early\s+warning\s+signs/i,
+                            /warning\s+signs.*address/i
+                        ],
+                        responseType: 'earlyWarningSignsConcern',
+                        confidence: 0.95,
+                        context: 'early_warning_signs_planning'
+                    },
+                    
+                    cognitiveMaintenanceGoalSelection: {
+                        triggers: [
+                            /maintain\s+current\s+cognitive/i,
+                            /maintain\s+cognitive\s+abilities/i,
+                            /keep.*cognitive.*sharp/i
+                        ],
+                        responseType: 'cognitiveMaintenanceGoal',
+                        confidence: 0.95,
+                        context: 'cognitive_maintenance_planning'
+                    },
+                    
+                    cognitiveResilienceGoalSelection: {
+                        triggers: [
+                            /build\s+cognitive\s+resilience/i,
+                            /cognitive\s+resilience/i,
+                            /resilience.*future/i
+                        ],
+                        responseType: 'cognitiveResilienceGoal',
+                        confidence: 0.95,
+                        context: 'cognitive_resilience_planning'
                     }
                 };
             }
@@ -1941,6 +1987,99 @@ Understanding your specific needs will help me provide the most relevant informa
                             "→ My situation is different - let me explain"
                         ],
                         phase: "medical_decision_preparation_planning"
+                    },
+                    
+                    // Specific concern response templates that follow the design pattern
+                    familyHistoryConcern: {
+                        message: `I understand that family history and genetic risk factors can be a significant concern. It's completely normal to worry about this, and it's actually very proactive of you to want to address it.
+
+**To help you most effectively, I need to understand more about your specific family history situation.**
+
+For example:
+• What specific cognitive conditions run in your family?
+• How many family members have been affected?
+• At what age did symptoms typically begin?
+• Are you experiencing any early warning signs yourself?
+• Something else that's important to you?
+
+Understanding your specific family history will help me provide the most relevant information about prevention strategies, early detection, and risk management.`,
+                        options: [
+                            "→ Alzheimer's disease runs in my family",
+                            "→ Dementia affects multiple family members",
+                            "→ I'm not sure what specific conditions to look for",
+                            "→ I want to learn about genetic testing options",
+                            "→ My family history is different - let me explain"
+                        ],
+                        phase: "family_history_concern_planning"
+                    },
+                    
+                    earlyWarningSignsConcern: {
+                        message: `Early warning signs are important to take seriously, and it's very wise of you to want to address them proactively. Early intervention can make a significant difference in outcomes.
+
+**To help you most effectively, I need to understand what specific early warning signs you're experiencing.**
+
+For example:
+• What specific changes have you noticed in your memory or thinking?
+• When did you first start noticing these changes?
+• How do these changes affect your daily life?
+• Are there specific situations where you notice them most?
+• Something else that's important to you?
+
+Understanding your specific symptoms will help me provide the most relevant guidance about when to seek medical attention and what steps to take.`,
+                        options: [
+                            "→ I'm forgetting recent conversations and events",
+                            "→ I have trouble finding the right words",
+                            "→ I'm getting lost in familiar places",
+                            "→ I'm having trouble with decision-making",
+                            "→ My symptoms are different - let me explain"
+                        ],
+                        phase: "early_warning_signs_planning"
+                    },
+                    
+                    cognitiveMaintenanceGoal: {
+                        message: `That's a proactive and important goal! Maintaining your current cognitive abilities as you age is one of the best investments you can make in your long-term health and quality of life.
+
+**To help you create the most effective maintenance plan, I need to understand your current cognitive strengths and what you want to preserve.**
+
+For example:
+• What cognitive abilities are you most concerned about maintaining?
+• What activities do you currently enjoy that you want to keep doing?
+• Are there specific cognitive challenges you're already experiencing?
+• What motivates you to maintain your cognitive health?
+• Something else that's important to you?
+
+Understanding your specific goals and current situation will help me create a maintenance strategy that's truly relevant to your life.`,
+                        options: [
+                            "→ I want to maintain my memory and recall abilities",
+                            "→ I want to keep my problem-solving skills sharp",
+                            "→ I want to preserve my language and communication skills",
+                            "→ I want to maintain my ability to learn new things",
+                            "→ My maintenance goals are different - let me explain"
+                        ],
+                        phase: "cognitive_maintenance_planning"
+                    },
+                    
+                    cognitiveResilienceGoal: {
+                        message: `Building cognitive resilience is such a smart approach! It's like creating a protective buffer that can help you maintain function even if challenges arise.
+
+**To help you build the most effective resilience, I need to understand what specific cognitive challenges you want to prepare for.**
+
+For example:
+• Are you preparing for age-related cognitive changes?
+• Do you want to build resilience against stress-related cognitive issues?
+• Are you preparing for potential health challenges that might affect cognition?
+• Do you want to strengthen your brain's ability to adapt and recover?
+• Something else that's important to you?
+
+Understanding your specific resilience goals will help me create a strategy that builds the right kind of protection for your situation.`,
+                        options: [
+                            "→ I want to prepare for age-related cognitive changes",
+                            "→ I want to build resilience against stress and cognitive decline",
+                            "→ I want to strengthen my brain's ability to adapt",
+                            "→ I want to prepare for potential health challenges",
+                            "→ My resilience goals are different - let me explain"
+                        ],
+                        phase: "cognitive_resilience_planning"
                     }
                 };
             }
@@ -2062,6 +2201,24 @@ Understanding the relationship between medications and brain health can help you
                         case 'cognitiveDeclinePreventionGoal':
                             await logGoal('Prevent cognitive decline', 8, ['long_term_health', 'prevention']);
                             await logConcern('Cognitive decline prevention', 'moderate', 'user_goal');
+                            break;
+                            
+                        case 'familyHistoryConcernSelection':
+                            await logConcern('Family history of cognitive decline', 'high', 'genetic_risk');
+                            await logGoal('Address genetic risk factors', 9, ['prevention', 'genetic_risk']);
+                            break;
+                            
+                        case 'earlyWarningSignsConcernSelection':
+                            await logConcern('Experiencing early warning signs', 'high', 'early_detection');
+                            await logGoal('Address early warning signs', 9, ['early_intervention']);
+                            break;
+                            
+                        case 'cognitiveMaintenanceGoalSelection':
+                            await logGoal('Maintain current cognitive abilities', 8, ['cognitive_maintenance']);
+                            break;
+                            
+                        case 'cognitiveResilienceGoalSelection':
+                            await logGoal('Build cognitive resilience', 8, ['resilience_building']);
                             break;
                             
                         case 'supportOthersBrainHealthGoal':
@@ -2190,6 +2347,61 @@ Understanding the relationship between medications and brain health can help you
                                 await logGoal('Address early warning signs', 9, ['early_intervention']);
                             } else if (userInput.toLowerCase().includes('cognitive resilience')) {
                                 await logGoal('Build cognitive resilience', 8, ['resilience_building']);
+                            }
+                            break;
+                            
+                        case 'family_history_concern_planning':
+                            if (userInput.toLowerCase().includes('alzheimer')) {
+                                await logConcern('Alzheimer\'s disease in family history', 'high', 'genetic_risk');
+                                await logGoal('Address Alzheimer\'s genetic risk', 9, ['prevention', 'genetic_risk']);
+                            } else if (userInput.toLowerCase().includes('dementia')) {
+                                await logConcern('Dementia in family history', 'high', 'genetic_risk');
+                                await logGoal('Address dementia genetic risk', 9, ['prevention', 'genetic_risk']);
+                            } else if (userInput.toLowerCase().includes('genetic testing')) {
+                                await logGoal('Explore genetic testing options', 8, ['genetic_risk', 'prevention']);
+                            } else if (userInput.toLowerCase().includes('not sure')) {
+                                await logConcern('Uncertainty about family cognitive conditions', 'moderate', 'genetic_risk');
+                                await logGoal('Learn about cognitive conditions to watch for', 7, ['education', 'genetic_risk']);
+                            }
+                            break;
+                            
+                        case 'early_warning_signs_planning':
+                            if (userInput.toLowerCase().includes('forgetting recent')) {
+                                await logConcern('Forgetting recent conversations and events', 'high', 'early_detection');
+                                await logGoal('Address memory changes', 9, ['early_intervention']);
+                            } else if (userInput.toLowerCase().includes('trouble finding words')) {
+                                await logConcern('Trouble finding the right words', 'moderate', 'early_detection');
+                                await logGoal('Address language difficulties', 8, ['early_intervention']);
+                            } else if (userInput.toLowerCase().includes('getting lost')) {
+                                await logConcern('Getting lost in familiar places', 'high', 'early_detection');
+                                await logGoal('Address spatial orientation issues', 9, ['early_intervention']);
+                            } else if (userInput.toLowerCase().includes('decision-making')) {
+                                await logConcern('Trouble with decision-making', 'moderate', 'early_detection');
+                                await logGoal('Address executive function changes', 8, ['early_intervention']);
+                            }
+                            break;
+                            
+                        case 'cognitive_maintenance_planning':
+                            if (userInput.toLowerCase().includes('memory and recall')) {
+                                await logGoal('Maintain memory and recall abilities', 8, ['cognitive_maintenance']);
+                            } else if (userInput.toLowerCase().includes('problem-solving')) {
+                                await logGoal('Keep problem-solving skills sharp', 8, ['cognitive_maintenance']);
+                            } else if (userInput.toLowerCase().includes('language and communication')) {
+                                await logGoal('Preserve language and communication skills', 8, ['cognitive_maintenance']);
+                            } else if (userInput.toLowerCase().includes('learn new things')) {
+                                await logGoal('Maintain ability to learn new things', 8, ['cognitive_maintenance']);
+                            }
+                            break;
+                            
+                        case 'cognitive_resilience_planning':
+                            if (userInput.toLowerCase().includes('age-related')) {
+                                await logGoal('Prepare for age-related cognitive changes', 8, ['resilience_building']);
+                            } else if (userInput.toLowerCase().includes('stress')) {
+                                await logGoal('Build resilience against stress-related cognitive issues', 8, ['resilience_building']);
+                            } else if (userInput.toLowerCase().includes('adapt and recover')) {
+                                await logGoal('Strengthen brain\'s ability to adapt and recover', 8, ['resilience_building']);
+                            } else if (userInput.toLowerCase().includes('health challenges')) {
+                                await logGoal('Prepare for potential health challenges affecting cognition', 8, ['resilience_building']);
                             }
                             break;
                             
