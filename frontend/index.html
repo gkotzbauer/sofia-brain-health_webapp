@@ -1428,6 +1428,220 @@
             }
         }
 
+        // Sofia's Response Patterns - Styling Guide for Consistent Interactions
+        const sofiaResponsePatterns = {
+            // Core response templates
+            exploration: {
+                pattern: (topic, choiceName, curiosityPrompt, examples, personalConnection) => {
+                    let response = `${choiceName} - ${topic.enthusiasm}!\n\n`;
+                    
+                    if (personalConnection) {
+                        response += `${personalConnection}\n\n`;
+                    }
+                    
+                    response += `${curiosityPrompt}\n\n`;
+                    
+                    if (examples && examples.length > 0) {
+                        examples.forEach(example => {
+                            response += `• ${example}\n`;
+                        });
+                        response += `\n`;
+                    }
+                    
+                    response += topic.inviteSharing;
+                    
+                    return response;
+                }
+            },
+            
+            // Topic-specific content
+            topics: {
+                walking: {
+                    enthusiasm: "Walking is one of the most powerful gifts you can give your brain",
+                    curiosityPrompts: [
+                        "Tell me, what draws you to walking?",
+                        "What does walking mean to you?",
+                        "I'm curious - what appeals to you about walking?"
+                    ],
+                    examples: [
+                        "The freedom of movement and fresh air",
+                        "A desire to explore your neighborhood",
+                        "Something your doctor recommended",
+                        "A way to clear your mind",
+                        "Or something else entirely"
+                    ],
+                    inviteSharing: "Share what walking means to you, and we can shape an adventure that fits your life perfectly.",
+                    personalConnections: {
+                        exercise: "It connects beautifully to your value of staying active!",
+                        independence: "Walking supports your desire to maintain independence.",
+                        outdoors: "Perfect for someone who loves spending time outdoors!",
+                        social: "Walking can be a wonderful social activity too."
+                    }
+                },
+                
+                nutrition: {
+                    enthusiasm: "What we eat truly feeds our brain",
+                    curiosityPrompts: [
+                        "What interests you about nutrition?",
+                        "What brought you to think about food and brain health?",
+                        "Tell me what healthy eating means to you"
+                    ],
+                    examples: [
+                        "Finding brain-healthy foods you'll actually enjoy",
+                        "Making simple swaps in meals you already love",
+                        "Understanding which foods boost memory",
+                        "Managing eating with health conditions",
+                        "Learning about the gut-brain connection"
+                    ],
+                    inviteSharing: "Share your thoughts about food and eating, and we'll create an approach that fits your tastes and lifestyle.",
+                    personalConnections: {
+                        independence: "Preparing your own healthy meals supports your independence.",
+                        family: "Sharing healthy meals can be a wonderful family activity.",
+                        health: "Good nutrition supports all your health goals."
+                    }
+                },
+                
+                sleep: {
+                    enthusiasm: "Sleep is when your brain heals and consolidates memories",
+                    curiosityPrompts: [
+                        "What's your relationship with sleep like?",
+                        "Tell me about your sleep patterns",
+                        "What would better sleep mean for you?"
+                    ],
+                    examples: [
+                        "Creating a calming bedtime routine",
+                        "Dealing with middle-of-the-night wakings",
+                        "Managing worries that keep you awake",
+                        "Finding the right sleep schedule",
+                        "Making your bedroom more sleep-friendly"
+                    ],
+                    inviteSharing: "Tell me about your sleep, and let's work together to help your brain get the rest it needs.",
+                    personalConnections: {
+                        energy: "Better sleep means more energy for what you love.",
+                        memory: "Good sleep is crucial for memory consolidation.",
+                        mood: "Quality sleep supports emotional wellbeing."
+                    }
+                },
+                
+                socialConnection: {
+                    enthusiasm: "Our connections with others are powerful brain medicine",
+                    curiosityPrompts: [
+                        "What kind of social connections are you thinking about?",
+                        "Tell me about your social life",
+                        "What would meaningful connection look like for you?"
+                    ],
+                    examples: [
+                        "Reconnecting with old friends",
+                        "Making new connections with shared interests",
+                        "Deepening family relationships",
+                        "Finding community groups or clubs",
+                        "Balancing alone time with social time"
+                    ],
+                    inviteSharing: "Share what connection means to you, and we'll explore ways to nurture your social brain health.",
+                    personalConnections: {
+                        family: "Your value of family time is wonderful for brain health!",
+                        independence: "You can maintain independence while building connections.",
+                        activities: "Shared activities can deepen relationships."
+                    }
+                },
+                
+                memory: {
+                    enthusiasm: "Our memory is like a garden we can nurture and grow",
+                    curiosityPrompts: [
+                        "What aspects of memory are on your mind?",
+                        "Tell me about your memory experiences",
+                        "What would better memory mean for your daily life?"
+                    ],
+                    examples: [
+                        "Remembering names and faces better",
+                        "Finding things you've misplaced",
+                        "Keeping track of appointments",
+                        "Learning new skills or hobbies",
+                        "Preserving precious memories"
+                    ],
+                    inviteSharing: "Share your thoughts about memory, and we'll explore ways to keep your mind sharp.",
+                    personalConnections: {
+                        independence: "A sharp memory supports your independence.",
+                        learning: "Memory is the foundation of all learning.",
+                        social: "Remembering details about others deepens relationships."
+                    }
+                }
+            },
+            
+            // Goal guidance patterns
+            goalProgression: {
+                visioning: (topic) => 
+                    `Let's think about this together. If you could imagine your ideal ${topic} routine, what would it look like?`,
+                
+                makingConcrete: (activity) => 
+                    `Now, here's a thought - what if we turned this vision into something you could actually start this week? Nothing overwhelming, just a small, enjoyable step.`,
+                
+                confirmation: (goal) => 
+                    `I love it! So your adventure could be: "${goal}"\n\nThis feels like a wonderful starting point - achievable, enjoyable, and perfect for your brain health.`
+            },
+            
+            // Curiosity phrases to vary responses
+            curiosityStarters: [
+                "I'm curious - ",
+                "Tell me - ",
+                "I'd love to know - ",
+                "Help me understand - ",
+                "I wonder - ",
+                "What if I asked - "
+            ],
+            
+            // Encouragement patterns
+            encouragement: {
+                mild: "That's a great choice!",
+                moderate: "I love this choice!",
+                strong: "What a wonderful decision!",
+                personalized: (value) => `This beautifully supports your value of ${value}!`
+            }
+        };
+
+        // Helper function to get personalized connection
+        function getPersonalConnection(topic, userHistory) {
+            if (!userHistory.aboutMe || !userHistory.aboutMe.bestLifeElements) return null;
+            
+            const topicConnections = sofiaResponsePatterns.topics[topic]?.personalConnections;
+            if (!topicConnections) return null;
+            
+            // Find matching connection
+            for (const element of userHistory.aboutMe.bestLifeElements) {
+                const elementLower = element.element.toLowerCase();
+                for (const [key, connection] of Object.entries(topicConnections)) {
+                    if (elementLower.includes(key)) {
+                        return connection;
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        // Generate response using patterns
+        function generateExplorationResponse(topicKey, choiceName) {
+            const topic = sofiaResponsePatterns.topics[topicKey];
+            if (!topic) return null;
+            
+            // Get random curiosity prompt
+            const curiosityPrompt = topic.curiosityPrompts[
+                Math.floor(Math.random() * topic.curiosityPrompts.length)
+            ];
+            
+            // Get personal connection
+            const personalConnection = getPersonalConnection(topicKey, userHistory);
+            
+            // Generate response
+            return sofiaResponsePatterns.exploration.pattern(
+                topic,
+                choiceName,
+                curiosityPrompt,
+                topic.examples,
+                personalConnection
+            );
+        }
+
         // Story Moment Recognition Patterns
         const storyMomentPatterns = {
             emotionalTransitions: [
@@ -4963,19 +5177,17 @@ What aspect of movement speaks to you right now?`,
                     
                     currentPhase = "sleep_quest";
                     logEducationTopic("sleep_improvement");
-                    showBotMessage(
-                        `${connectionMessage}You enter the Garden of Rest, where peaceful nights nurture your brain's renewal.
-
-Sleep is when your brain heals and clears away the day's debris, ${userHistory.profile.name}. It's essential for memory and clear thinking.
-
-What aspect of your sleep journey would you like to explore?`,
-                        [
-                            "→ Creating a bedtime ritual",
-                            "→ Dealing with sleep disruptions",
-                            "→ Making my bedroom a sanctuary",
-                            "→ Managing worries at night"
-                        ]
-                    );
+                    
+                    // Use pattern system for sleep exploration
+                    const sleepResponse = generateExplorationResponse('sleep', 'The Garden of Rest');
+                    const fullResponse = connectionMessage + sleepResponse;
+                    
+                    showBotMessage(fullResponse, [
+                        "→ Creating a bedtime ritual",
+                        "→ Dealing with sleep disruptions",
+                        "→ Making my bedroom a sanctuary",
+                        "→ Managing worries at night"
+                    ]);
                     return;
                 }
                 
@@ -4987,50 +5199,28 @@ What aspect of your sleep journey would you like to explore?`,
                     }
                     
                     currentPhase = "connection_quest";
-                    showBotMessage(
-                        `${connectionMessage}You enter the Circle of Connection, where relationships nurture your cognitive health.
-
-Social bonds are powerful brain protectors, ${userHistory.profile.name}. Every meaningful conversation creates new neural pathways.
-
-How would you like to strengthen your connections?`,
-                        [
-                            "→ Reconnect with old friends",
-                            "→ Deepen family bonds",
-                            "→ Join a community group",
-                            "→ Share your wisdom with others"
-                        ]
-                    );
+                    
+                    // Use pattern system for social connection exploration
+                    const socialResponse = generateExplorationResponse('socialConnection', 'The Circle of Connection');
+                    const fullResponse = connectionMessage + socialResponse;
+                    
+                    showBotMessage(fullResponse, [
+                        "→ Reconnect with old friends",
+                        "→ Deepen family bonds",
+                        "→ Join a community group",
+                        "→ Share your wisdom with others"
+                    ]);
                     return;
                 }
             }
 
-            // Movement Path Handlers
+            // Movement Path Handlers using the pattern system
             if (currentPhase === "movement_quest") {
                 if (lowerMessage.includes('daily walking') || lowerMessage.includes('walking adventures')) {
                     currentPhase = "walking_exploration";
                     
-                    // Link to About Me if relevant
-                    let walkingMessage = "";
-                    if (userHistory.aboutMe.bestLifeElements.some(e => 
-                        e.element.includes('Exercise') || 
-                        e.element.includes('outdoors') || 
-                        e.element.includes('independent'))) {
-                        walkingMessage = `Walking - what a perfect choice! It connects beautifully to what matters to you.\n\n`;
-                    } else {
-                        walkingMessage = `Daily walking adventures - I love this choice! Walking is one of the most powerful gifts you can give your brain.\n\n`;
-                    }
-                    
-                    walkingMessage += `Tell me, ${userHistory.profile.name}, what draws you to walking? Is it:
-
-- The freedom of movement and fresh air?
-- A desire to explore your neighborhood?
-- Something your doctor recommended?
-- A way to clear your mind?
-- Or something else entirely?
-
-Share what walking means to you, and we can shape an adventure that fits your life perfectly.`;
-                    
-                    showBotMessage(walkingMessage);
+                    const response = generateExplorationResponse('walking', 'Daily walking adventures');
+                    showBotMessage(response);
                     return;
                 }
                 
@@ -5087,6 +5277,152 @@ What kind of joyful movement calls to you?
 - Something else that makes you smile?
 
 Tell me what brings you joy when you move, and let's turn that into your brain health adventure!`
+                    );
+                    return;
+                }
+            }
+
+            // Additional Path Handlers using the pattern system
+            if (currentPhase === "learning_quest") {
+                if (lowerMessage.includes('memory') || lowerMessage.includes('thinking skills')) {
+                    currentPhase = "memory_exploration";
+                    
+                    const response = generateExplorationResponse('memory', 'Memory and thinking skills');
+                    showBotMessage(response);
+                    return;
+                }
+                
+                if (lowerMessage.includes('hobbies') || lowerMessage.includes('new skills')) {
+                    currentPhase = "skill_learning_exploration";
+                    
+                    showBotMessage(
+                        `Learning new skills and hobbies - what an exciting choice! Every new thing you learn creates new neural pathways in your brain.
+
+What kind of learning interests you? Maybe you want to:
+
+- Pick up a musical instrument
+- Learn a new language
+- Master a craft or art form
+- Explore technology or digital skills
+- Or something else that calls to you?
+
+Tell me what you'd like to learn, and we'll create a plan that fits your interests and lifestyle.`
+                    );
+                    return;
+                }
+                
+                if (lowerMessage.includes('brain training') || lowerMessage.includes('exercises')) {
+                    currentPhase = "brain_training_exploration";
+                    
+                    showBotMessage(
+                        `Brain training exercises - excellent choice! These are like workouts for your mind, designed to strengthen specific cognitive skills.
+
+What aspects of brain training appeal to you? We could explore:
+
+- Memory games and puzzles
+- Attention and focus exercises
+- Problem-solving challenges
+- Speed and processing activities
+- Or a combination that feels right for you?
+
+Share what interests you about brain training, and we'll find activities that are both fun and beneficial.`
+                    );
+                    return;
+                }
+                
+                if (lowerMessage.includes('reading') || lowerMessage.includes('knowledge building')) {
+                    currentPhase = "reading_exploration";
+                    
+                    showBotMessage(
+                        `Reading and knowledge building - what a wonderful way to feed your mind! Reading is one of the most powerful brain exercises.
+
+What kind of reading interests you? Maybe you want to:
+
+- Explore new genres or authors
+- Read about topics that fascinate you
+- Join a book club or reading group
+- Listen to audiobooks while doing other activities
+- Or discover new ways to enjoy stories and information?
+
+Tell me about your reading interests, and we'll create a plan that makes learning enjoyable and meaningful.`
+                    );
+                    return;
+                }
+            }
+
+            if (currentPhase === "calm_quest") {
+                if (lowerMessage.includes('breathing') || lowerMessage.includes('relaxation techniques')) {
+                    currentPhase = "breathing_exploration";
+                    
+                    showBotMessage(
+                        `Breathing and relaxation techniques - wise choice! These are some of the most powerful tools for finding calm in any moment.
+
+What draws you to breathing and relaxation? Maybe you want to:
+
+- Learn simple breathing exercises you can do anywhere
+- Find techniques for managing daily stress
+- Create peaceful moments throughout your day
+- Develop a relaxation practice that fits your life
+- Or discover what works best for you?
+
+Share what you're looking for, and we'll explore techniques that bring you the calm you deserve.`
+                    );
+                    return;
+                }
+                
+                if (lowerMessage.includes('daily stressors') || lowerMessage.includes('managing stress')) {
+                    currentPhase = "stress_management_exploration";
+                    
+                    showBotMessage(
+                        `Managing daily stressors - this is so important for brain health! When we manage stress well, our brain can function at its best.
+
+What aspects of stress management interest you? We could explore:
+
+- Identifying your stress triggers
+- Creating stress-free zones in your day
+- Learning to say no to overwhelming commitments
+- Finding activities that naturally reduce stress
+- Or developing your own stress management toolkit?
+
+Tell me about your stress patterns, and we'll work together to create strategies that fit your life.`
+                    );
+                    return;
+                }
+                
+                if (lowerMessage.includes('peaceful moments') || lowerMessage.includes('creating calm')) {
+                    currentPhase = "peaceful_moments_exploration";
+                    
+                    showBotMessage(
+                        `Creating peaceful moments - what a beautiful intention! These moments are like mini-vacations for your brain.
+
+What kind of peaceful moments would you like to create? Maybe you want to:
+
+- Start your day with a calm morning routine
+- Find quiet time during busy days
+- Create a peaceful evening ritual
+- Designate special places for calm in your home
+- Or discover what brings you peace naturally?
+
+Share what peace means to you, and we'll explore ways to weave more calm into your daily life.`
+                    );
+                    return;
+                }
+                
+                if (lowerMessage.includes('balance') || lowerMessage.includes('busy times')) {
+                    currentPhase = "balance_exploration";
+                    
+                    showBotMessage(
+                        `Finding balance in busy times - this is such an important skill! Life can be hectic, but we can learn to navigate it with more calm.
+
+What aspects of finding balance interest you? We could explore:
+
+- Setting healthy boundaries with your time
+- Learning to prioritize what truly matters
+- Creating buffer time between activities
+- Finding ways to recharge during busy periods
+- Or developing your own balance strategies?
+
+Tell me about your busy times and what balance would look like for you, and we'll create approaches that help you stay centered.`
                     );
                     return;
                 }
