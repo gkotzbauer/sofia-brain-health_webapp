@@ -5952,6 +5952,55 @@ Given what we've discussed, how confident are you that you can address these con
                     confidence: 0.95,
                     reason: 'document_upload_need'
                 },
+                // Discuss specific documents from provider
+                {
+                    pattern: /(?:want\s+to\s+)?(?:discuss|talk\s+about|go\s+over)\s+(?:the\s+)?(?:last|recent|latest)\s+(?:document|paper|report|information)\s+(?:my\s+)?(?:provider|doctor|clinician|therapist)\s+(?:gave\s+)?(?:to\s+)?(?:me)/i,
+                    topic: 'discuss_provider_document',
+                    confidence: 0.95,
+                    reason: 'user_wants_to_discuss_specific_document'
+                },
+                // General document discussion requests
+                {
+                    pattern: /(?:want\s+to\s+)?(?:discuss|talk\s+about|go\s+over)\s+(?:a\s+)?(?:document|paper|report|medical\s+information)/i,
+                    topic: 'discuss_documents_general',
+                    confidence: 0.95,
+                    reason: 'user_wants_to_discuss_documents'
+                },
+                // Health concerns and questions
+                {
+                    pattern: /(?:want\s+to\s+)?(?:discuss|talk\s+about|ask\s+about)\s+(?:my\s+)?(?:health|symptoms|condition|concerns)/i,
+                    topic: 'health_concerns_discussion',
+                    confidence: 0.95,
+                    reason: 'user_wants_to_discuss_health'
+                },
+                // Sleep and rest issues
+                {
+                    pattern: /(?:want\s+to\s+)?(?:discuss|talk\s+about|get\s+help\s+with)\s+(?:my\s+)?(?:sleep|rest|insomnia|tiredness|fatigue)/i,
+                    topic: 'sleep_rest_help',
+                    confidence: 0.95,
+                    reason: 'user_wants_sleep_help'
+                },
+                // Stress and anxiety
+                {
+                    pattern: /(?:want\s+to\s+)?(?:discuss|talk\s+about|get\s+help\s+with)\s+(?:my\s+)?(?:stress|anxiety|worries|concerns|pressure)/i,
+                    topic: 'stress_anxiety_help',
+                    confidence: 0.95,
+                    reason: 'user_wants_stress_help'
+                },
+                // Memory and cognitive concerns
+                {
+                    pattern: /(?:want\s+to\s+)?(?:discuss|talk\s+about|get\s+help\s+with)\s+(?:my\s+)?(?:memory|thinking|cognitive|brain\s+function|forgetfulness)/i,
+                    topic: 'memory_cognitive_help',
+                    confidence: 0.95,
+                    reason: 'user_wants_memory_help'
+                },
+                // Relationship and social concerns
+                {
+                    pattern: /(?:want\s+to\s+)?(?:discuss|talk\s+about|get\s+help\s+with)\s+(?:my\s+)?(?:relationships?|social|family|friends|connections)/i,
+                    topic: 'relationship_social_help',
+                    confidence: 0.95,
+                    reason: 'user_wants_relationship_help'
+                },
                 // Learn about brain health
                 {
                     pattern: /(?:learn|find\s+out|understand|know\s+more)\s+(?:about\s+)?(?:brain\s+)?(?:health|wellness|function)/i,
@@ -6295,6 +6344,24 @@ Given what we've discussed, how confident are you that you can address these con
                         "→ I changed my mind - let's discuss something else"
                     ]
                 },
+                discuss_provider_document: {
+                    message: `I'd be happy to help you discuss that document from your provider! Sometimes medical information can be confusing, and it's completely normal to want to go over it together.`,
+                    options: [
+                        "→ Upload the document so I can help explain it",
+                        "→ Tell me what the document said",
+                        "→ Ask specific questions about the content",
+                        "→ Discuss how you're feeling about the information"
+                    ]
+                },
+                discuss_documents_general: {
+                    message: `Absolutely! Documents and medical information can be overwhelming, and I'm here to help you understand them. What would be most helpful for you?`,
+                    options: [
+                        "→ Upload a document for me to review",
+                        "→ Ask questions about medical terms",
+                        "→ Discuss what you learned from a document",
+                        "→ Get help organizing medical information"
+                    ]
+                },
                 brain_health_learning: {
                     message: `Wonderful! Learning about brain health is such an important part of taking care of yourself. I'd love to share some insights and help you understand how your brain works.`,
                     options: [
@@ -6409,6 +6476,51 @@ Given what we've discussed, how confident are you that you can address these con
                         "→ Ask a brain health question",
                         "→ Talk about something personal",
                         "→ Just chat and connect"
+                    ]
+                },
+                health_concerns_discussion: {
+                    message: `I'm here to help you with your health concerns. Your health is so important, and it's completely normal to have questions or worries. What specific health topic would you like to discuss?`,
+                    options: [
+                        "→ Talk about specific symptoms",
+                        "→ Discuss recent health changes",
+                        "→ Ask about medications or treatments",
+                        "→ Get help understanding medical information"
+                    ]
+                },
+                sleep_rest_help: {
+                    message: `Sleep and rest are fundamental to your brain health and overall well-being. I'd love to help you work on getting better sleep and feeling more rested. What aspect of sleep would you like to focus on?`,
+                    options: [
+                        "→ Create a better bedtime routine",
+                        "→ Learn relaxation techniques",
+                        "→ Discuss what's keeping me awake",
+                        "→ Explore sleep hygiene improvements"
+                    ]
+                },
+                stress_anxiety_help: {
+                    message: `Stress and anxiety can really impact your quality of life, and you don't have to face them alone. I'm here to help you develop strategies to manage these challenges. What would be most helpful?`,
+                    options: [
+                        "→ Learn stress management techniques",
+                        "→ Talk about what's causing my stress",
+                        "→ Practice anxiety reduction methods",
+                        "→ Develop coping strategies"
+                    ]
+                },
+                memory_cognitive_help: {
+                    message: `Memory and cognitive function are such important aspects of brain health. I'd love to help you understand what's happening and work on strategies to support your thinking and memory. What would you like to explore?`,
+                    options: [
+                        "→ Learn about memory changes",
+                        "→ Practice cognitive exercises",
+                        "→ Discuss factors affecting my thinking",
+                        "→ Explore brain health strategies"
+                    ]
+                },
+                relationship_social_help: {
+                    message: `Relationships and social connections are vital for your brain health and emotional well-being. I'm here to help you navigate these important aspects of your life. What relationship topic would you like to discuss?`,
+                    options: [
+                        "→ Work on communication skills",
+                        "→ Navigate family challenges",
+                        "→ Build new friendships",
+                        "→ Strengthen existing relationships"
                     ]
                 }
             };
