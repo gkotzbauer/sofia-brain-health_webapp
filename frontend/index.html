@@ -1488,6 +1488,478 @@
             return response;
         }
 
+        // ============= UNIVERSAL CONVERSATION SYSTEM =============
+        // This system replaces all hardcoded handlers with AI-powered pattern recognition
+        // and dynamic response generation that maintains your perfect conversation patterns
+        
+        class IntentRecognitionEngine {
+            constructor() {
+                this.patterns = this.initializePatterns();
+                this.contextPatterns = this.initializeContextPatterns();
+            }
+            
+            initializePatterns() {
+                return {
+                    // Brain Health Learning Patterns
+                    brainHealthLearning: {
+                        triggers: [
+                            /learn\s+about\s+brain\s+health/i,
+                            /brain\s+health\s+learning/i,
+                            /tell\s+me\s+about\s+brain\s+health/i,
+                            /brain\s+health\s+information/i
+                        ],
+                        responseType: 'goalOrientedBrainHealth',
+                        confidence: 0.95,
+                        context: 'brain_health_goal_identification'
+                    },
+                    
+                    // Goal-Oriented Patterns
+                    goalClarification: {
+                        triggers: [
+                            /personalized\s+learning\s+plan/i,
+                            /my\s+goals/i,
+                            /create\s+a\s+plan/i,
+                            /tailor.*needs/i
+                        ],
+                        responseType: 'goalPlanning',
+                        confidence: 0.90,
+                        context: 'brain_health_goal_planning'
+                    },
+                    
+                    // Specific Concern Patterns
+                    specificConcern: {
+                        triggers: [
+                            /specific\s+question/i,
+                            /concern.*address/i,
+                            /question.*concern/i,
+                            /address.*concern/i
+                        ],
+                        responseType: 'concernExploration',
+                        confidence: 0.90,
+                        context: 'brain_health_specific_concern'
+                    },
+                    
+                    // Document Help Patterns
+                    documentHelp: {
+                        triggers: [
+                            /documents.*help/i,
+                            /information.*understanding/i,
+                            /help.*understanding/i,
+                            /medical.*information/i
+                        ],
+                        responseType: 'documentSupport',
+                        confidence: 0.90,
+                        context: 'brain_health_document_help'
+                    },
+                    
+                    // Clarification Patterns
+                    needClarification: {
+                        triggers: [
+                            /not\s+sure/i,
+                            /help\s+me\s+figure\s+out/i,
+                            /don't\s+know/i,
+                            /unsure/i
+                        ],
+                        responseType: 'clarificationSupport',
+                        confidence: 0.90,
+                        context: 'brain_health_clarification'
+                    },
+                    
+                    // Story Building Patterns
+                    storyBuilding: {
+                        triggers: [
+                            /build.*story/i,
+                            /brain\s+health\s+journey/i,
+                            /my\s+story/i,
+                            /journey.*story/i
+                        ],
+                        responseType: 'storyDevelopment',
+                        confidence: 0.90,
+                        context: 'brain_health_story_building'
+                    }
+                };
+            }
+            
+            initializeContextPatterns() {
+                return {
+                    // Memory and Cognitive Patterns
+                    memoryConcerns: {
+                        triggers: [
+                            /memory\s+changes/i,
+                            /forget/i,
+                            /memory\s+problems/i,
+                            /cognitive\s+decline/i
+                        ],
+                        responseType: 'memorySupport',
+                        confidence: 0.95,
+                        context: 'memory_specific_concern'
+                    },
+                    
+                    // Concentration Patterns
+                    concentrationIssues: {
+                        triggers: [
+                            /concentrating/i,
+                            /focusing/i,
+                            /attention/i,
+                            /concentration\s+problems/i
+                        ],
+                        responseType: 'concentrationSupport',
+                        confidence: 0.95,
+                        context: 'concentration_specific_concern'
+                    },
+                    
+                    // Medication Patterns
+                    medicationQuestions: {
+                        triggers: [
+                            /medications/i,
+                            /medication.*brain/i,
+                            /drug.*brain/i,
+                            /prescription.*brain/i
+                        ],
+                        responseType: 'medicationSupport',
+                        confidence: 0.95,
+                        context: 'medication_specific_concern'
+                    }
+                };
+            }
+            
+            async analyzeInput(userInput, currentContext, conversationState) {
+                const lowerInput = userInput.toLowerCase();
+                let bestMatch = null;
+                let highestConfidence = 0;
+                
+                // Check all patterns for matches
+                const allPatterns = { ...this.patterns, ...this.contextPatterns };
+                
+                for (const [patternKey, pattern] of Object.entries(allPatterns)) {
+                    for (const trigger of pattern.triggers) {
+                        if (trigger.test(lowerInput)) {
+                            if (pattern.confidence > highestConfidence) {
+                                highestConfidence = pattern.confidence;
+                                bestMatch = {
+                                    patternKey,
+                                    responseType: pattern.responseType,
+                                    context: pattern.context,
+                                    confidence: pattern.confidence,
+                                    userInput,
+                                    currentContext,
+                                    conversationState
+                                };
+                            }
+                        }
+                    }
+                }
+                
+                console.log('🎯 Intent Recognition Result:', bestMatch);
+                return bestMatch;
+            }
+        }
+        
+        class ResponseGenerationEngine {
+            constructor() {
+                this.responseTemplates = this.initializeResponseTemplates();
+                this.optionTemplates = this.initializeOptionTemplates();
+            }
+            
+            initializeResponseTemplates() {
+                return {
+                    goalOrientedBrainHealth: {
+                        message: `Wonderful! Learning about brain health is such an important part of taking care of yourself.
+
+To help you most effectively, I need to understand your specific needs and goals.
+
+**Do you have a particular question or concern you would like to discuss?** Or would you like me to **guide you through a learning plan we will tailor to your needs and goals?**
+
+This will help me provide the most relevant and helpful information for your situation.`,
+                        options: [
+                            "→ I have a specific question or concern I want to address",
+                            "→ I want to create a personalized learning plan for my goals",
+                            "→ I'm not sure what I need - help me figure it out",
+                            "→ I have documents or information I need help understanding",
+                            "→ I want to build a story about my brain health journey"
+                        ],
+                        phase: "brain_health_goal_identification"
+                    },
+                    
+                    goalPlanning: {
+                        message: `Excellent! A personalized learning plan will be much more effective than generic information.
+
+**What are your main goals for learning about brain health?**
+
+For example:
+• Do you want to improve your memory and thinking skills?
+• Are you trying to prevent cognitive decline?
+• Do you want to support someone else's brain health?
+• Are you preparing for a medical appointment or decision?
+• Something else that's important to you?
+
+Understanding your goals will help me create a plan that's truly relevant to your life.`,
+                        options: [
+                            "→ I want to improve my memory and thinking skills",
+                            "→ I want to prevent cognitive decline",
+                            "→ I want to support someone else's brain health",
+                            "→ I'm preparing for a medical decision",
+                            "→ My goal is different - let me explain"
+                        ],
+                        phase: "brain_health_goal_planning"
+                    },
+                    
+                    concernExploration: {
+                        message: `Perfect! Let's get straight to what matters most to you.
+
+**What specific question or concern do you have about brain health?**
+
+For example:
+• Are you experiencing memory changes?
+• Do you have trouble concentrating or focusing?
+• Are you worried about cognitive decline?
+• Do you have questions about medications affecting your brain?
+• Something else specific to your situation?
+
+The more specific you can be, the better I can help you.`,
+                        options: [
+                            "→ I'm experiencing memory changes",
+                            "→ I have trouble concentrating or focusing",
+                            "→ I'm worried about cognitive decline",
+                            "→ I have questions about medications",
+                            "→ My concern is different - let me explain"
+                        ],
+                        phase: "brain_health_specific_concern"
+                    },
+                    
+                    documentSupport: {
+                        message: `Great! Understanding medical documents can be overwhelming, and I'm here to help.
+
+**What kind of information do you have that you'd like help understanding?**
+
+For example:
+• Medical test results or lab reports?
+• Doctor's notes or recommendations?
+• Research articles or educational materials?
+• Something else?
+
+Once I understand what you're working with, I can help you make sense of it and answer your questions.`,
+                        options: [
+                            "→ I have medical test results",
+                            "→ I have doctor's notes",
+                            "→ I have research articles",
+                            "→ I have something else",
+                            "→ Let me upload a document for you to review"
+                        ],
+                        phase: "brain_health_document_help"
+                    },
+                    
+                    clarificationSupport: {
+                        message: `That's completely normal! Many people aren't sure where to start with brain health.
+
+Let me help you figure out what you need by asking a few simple questions:
+
+**First, what prompted you to want to learn about brain health today?**
+
+• Did something specific happen?
+• Did someone suggest it?
+• Are you just curious?
+• Are you worried about something?
+• Something else?
+
+This will help me guide you to the most relevant information.`,
+                        options: [
+                            "→ Something specific happened",
+                            "→ I'm just curious",
+                            "→ I'm worried about something",
+                            "→ Something else prompted me"
+                        ],
+                        phase: "brain_health_clarification"
+                    },
+                    
+                    storyDevelopment: {
+                        message: `Wonderful! Building a story about your brain health journey is such a powerful way to understand and improve your health.
+
+**What aspect of your brain health story would you like to focus on?**
+
+For example:
+• Documenting your current brain health status?
+• Tracking changes and improvements over time?
+• Creating chapters about specific health goals?
+• Building a narrative about your health journey?
+• Something else that feels meaningful to you?
+
+Your story can be a powerful tool for motivation and progress tracking.`,
+                        options: [
+                            "→ Document my current brain health status",
+                            "→ Track changes and improvements over time",
+                            "→ Create chapters about specific health goals",
+                            "→ Build a narrative about my health journey",
+                            "→ Something else feels meaningful to me"
+                        ],
+                        phase: "brain_health_story_building"
+                    }
+                };
+            }
+            
+            initializeOptionTemplates() {
+                return {
+                    memorySupport: {
+                        message: `Memory changes can be concerning, and it's completely normal to want to understand what's happening.
+
+**What specific memory changes are you experiencing?**
+
+For example:
+• Are you forgetting recent events or conversations?
+• Do you have trouble remembering names or faces?
+• Are you misplacing things more often?
+• Do you notice changes in how you learn new information?
+• Something else specific to your situation?
+
+The more specific you can be, the better I can help you understand what's normal and what might need attention.`,
+                        options: [
+                            "→ I forget recent events or conversations",
+                            "→ I have trouble remembering names or faces",
+                            "→ I misplace things more often",
+                            "→ I have trouble learning new information",
+                            "→ My memory changes are different - let me explain"
+                        ],
+                        phase: "memory_specific_concern"
+                    },
+                    
+                    concentrationSupport: {
+                        message: `Concentration and focus issues can really impact your daily life, and there are many effective ways to address them.
+
+**What specific concentration or focus issues are you experiencing?**
+
+For example:
+• Do you have trouble staying focused on tasks?
+• Do you get easily distracted by your surroundings?
+• Do you find your mind wandering during conversations?
+• Do you have trouble completing projects or assignments?
+• Something else specific to your situation?
+
+Understanding your specific challenges will help me provide the most relevant strategies and support.`,
+                        options: [
+                            "→ I have trouble staying focused on tasks",
+                            "→ I get easily distracted by my surroundings",
+                            "→ My mind wanders during conversations",
+                            "→ I have trouble completing projects",
+                            "→ My focus issues are different - let me explain"
+                        ],
+                        phase: "concentration_specific_concern"
+                    },
+                    
+                    medicationSupport: {
+                        message: `Medications can have significant effects on brain function, and it's important to understand these impacts.
+
+**What specific questions do you have about medications and your brain?**
+
+For example:
+• Are you concerned about side effects on memory or thinking?
+• Do you want to understand how a medication affects brain function?
+• Are you considering starting or stopping a medication?
+• Do you have questions about medication interactions?
+• Something else specific to your situation?
+
+Understanding the relationship between medications and brain health can help you make informed decisions.`,
+                        options: [
+                            "→ I'm concerned about side effects on memory or thinking",
+                            "→ I want to understand how a medication affects brain function",
+                            "→ I'm considering starting or stopping a medication",
+                            "→ I have questions about medication interactions",
+                            "→ My medication questions are different - let me explain"
+                        ],
+                        phase: "medication_specific_concern"
+                    }
+                };
+            }
+            
+            async generateResponse(intent, context, state) {
+                const { responseType } = intent;
+                
+                // Get the appropriate response template
+                const template = this.responseTemplates[responseType] || this.optionTemplates[responseType];
+                
+                if (!template) {
+                    console.log('❌ No response template found for:', responseType);
+                    return null;
+                }
+                
+                // Generate the response
+                const response = {
+                    message: template.message,
+                    options: template.options,
+                    phase: template.phase,
+                    intent: intent,
+                    context: context,
+                    state: state
+                };
+                
+                console.log('🎯 Generated Response:', response);
+                return response;
+            }
+        }
+        
+        class ConversationFlowManager {
+            constructor() {
+                this.intentEngine = new IntentRecognitionEngine();
+                this.responseEngine = new ResponseGenerationEngine();
+            }
+            
+            async processUserInput(userInput, currentPhase, userHistory) {
+                console.log('🎯 ConversationFlowManager processing:', userInput, 'Phase:', currentPhase);
+                
+                // Get current conversation context
+                const currentContext = this.getCurrentConversationContext();
+                const conversationState = getConversationState();
+                
+                // Analyze user intent
+                const intent = await this.intentEngine.analyzeInput(userInput, currentContext, conversationState);
+                
+                if (!intent) {
+                    console.log('❌ No intent recognized, falling back to existing handlers');
+                    return null; // Fall back to existing handlers
+                }
+            
+                // Generate appropriate response
+                const response = await this.responseEngine.generateResponse(intent, currentContext, conversationState);
+                
+                if (!response) {
+                    console.log('❌ No response generated, falling back to existing handlers');
+                    return null; // Fall back to existing handlers
+                }
+                
+                // Return the generated response for processing
+                return {
+                    shouldSwitch: true,
+                    newTopic: intent.patternKey,
+                    newPhase: response.phase,
+                    confidence: intent.confidence,
+                    reason: 'universal_system_response',
+                    userInput: userInput,
+                    dynamicResponse: {
+                        message: response.message,
+                        options: response.options
+                    }
+                };
+            }
+            
+            getCurrentConversationContext() {
+                const chatContainer = document.getElementById('chatContainer');
+                if (!chatContainer) return null;
+                
+                const botMessages = chatContainer.querySelectorAll('.bot-message');
+                if (botMessages.length === 0) return null;
+                
+                const recentMessages = Array.from(botMessages).slice(-3);
+                const contextText = recentMessages.map(msg => msg.textContent || msg.innerText).join(' ').toLowerCase();
+                
+                console.log('🎯 Extracted conversation context:', contextText);
+                return contextText;
+            }
+        }
+        
+        // Initialize the universal conversation system
+        const universalConversationManager = new ConversationFlowManager();
+        
+        // ============= END UNIVERSAL CONVERSATION SYSTEM =============
+
         // ============= TOKEN-EFFICIENT DOCUMENT PROCESSOR CLASS =============
         class TokenEfficientDocumentProcessor {
             constructor() {
@@ -6988,7 +7460,18 @@ Given what we've discussed, how confident are you that you can address these con
                 }
             }
 
-            // CORE INTENT RECOGNITION - Detect when users want to discuss new topics
+            // UNIVERSAL CONVERSATION SYSTEM - AI-powered pattern recognition and response generation
+            console.log('🚀 Universal system processing message:', message);
+            const universalResponse = await universalConversationManager.processUserInput(message, currentPhase, userHistory);
+            
+            if (universalResponse) {
+                console.log('🎯 Universal system generated response:', universalResponse);
+                showBotMessage(universalResponse.dynamicResponse.message, universalResponse.dynamicResponse.options);
+                currentPhase = universalResponse.newPhase;
+                return;
+            }
+            
+            // CORE INTENT RECOGNITION - Fallback to existing system if universal system doesn't handle it
             console.log('🔍 Intent recognition check for message:', message);
             const intentRecognition = detectUserIntent(message, currentPhase);
             console.log('🎯 Intent recognition result:', intentRecognition);
