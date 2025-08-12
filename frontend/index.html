@@ -1709,6 +1709,30 @@
             }
         }
 
+        // Test function for document processor
+        function testDocumentProcessor() {
+            try {
+                console.log('🧪 Testing document processor...');
+                const processor = new TokenEfficientDocumentProcessor();
+                console.log('✅ Class instantiated successfully');
+                console.log('📊 Chunk size:', processor.chunkSize);
+                console.log('📊 Overlap size:', processor.overlapSize);
+                
+                // Test with sample text
+                const sampleText = "Patient diagnosed with diabetes. Prescribed Metformin 500mg twice daily.";
+                console.log('📝 Sample text:', sampleText);
+                
+                processor.processDocument(sampleText, "test.txt").then(result => {
+                    console.log('✅ Document processed successfully:', result);
+                }).catch(error => {
+                    console.error('❌ Processing failed:', error);
+                });
+                
+            } catch (error) {
+                console.error('❌ Test failed:', error);
+            }
+        }
+
         // Sofia's Response Patterns - Styling Guide for Consistent Interactions
         const sofiaResponsePatterns = {
             // Core response templates
