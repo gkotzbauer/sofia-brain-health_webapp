@@ -5746,11 +5746,11 @@ Given what we've discussed, how confident are you that you can address these con
                 };
             }
             
-            // First, check if this is a brain health option selection
-            if (message.startsWith('→') && (lowerMessage.includes('brain') || lowerMessage.includes('memory') || lowerMessage.includes('cognitive') || lowerMessage.includes('lifestyle') || lowerMessage.includes('concerns'))) {
-                console.log('🧠 Detected brain health option selection:', message);
-                const brainHealthOption = handleBrainHealthOption(message);
-                if (brainHealthOption) {
+            // First, check if this is a main menu option selection
+            if (message.startsWith('→')) {
+                console.log('🎯 Detected main menu option selection:', message);
+                const mainMenuOption = handleMainMenuOption(message);
+                if (mainMenuOption) {
                     // Preserve current conversation context
                     window.conversationMemory.previousTopic = currentPhase;
                     window.conversationMemory.previousPhase = currentPhase;
@@ -5759,11 +5759,11 @@ Given what we've discussed, how confident are you that you can address these con
                     
                     return {
                         shouldSwitch: true,
-                        newTopic: brainHealthOption.newTopic,
-                        newPhase: brainHealthOption.newPhase,
-                        confidence: brainHealthOption.confidence,
-                        reason: brainHealthOption.reason,
-                        userInput: brainHealthOption.userInput
+                        newTopic: mainMenuOption.newTopic,
+                        newPhase: mainMenuOption.newPhase,
+                        confidence: mainMenuOption.confidence,
+                        reason: mainMenuOption.reason,
+                        userInput: mainMenuOption.userInput
                     };
                 }
             }
@@ -5791,11 +5791,12 @@ Given what we've discussed, how confident are you that you can address these con
             return { shouldSwitch: false };
         }
         
-        // Intelligent option selection handler for brain health topics
-        function handleBrainHealthOption(optionText) {
+        // Intelligent option selection handler for all main menu topics
+        function handleMainMenuOption(optionText) {
             const cleanOption = optionText.replace(/^→\s+/, '').toLowerCase();
-            console.log('🧠 Processing brain health option:', cleanOption);
+            console.log('🎯 Processing main menu option:', cleanOption);
             
+            // Brain health specific options
             if (cleanOption.includes('brain health basics') || cleanOption.includes('basics') || cleanOption.includes('fundamentals')) {
                 return {
                     shouldSwitch: true,
@@ -5836,6 +5837,84 @@ Given what we've discussed, how confident are you that you can address these con
                     newPhase: 'natural_brain_health_concerns',
                     confidence: 0.98,
                     reason: 'user_selected_concerns_topic',
+                    userInput: cleanOption
+                };
+            }
+            
+            // Main menu options
+            if (cleanOption.includes('continue working') || cleanOption.includes('goals') || cleanOption.includes('life chapters')) {
+                return {
+                    shouldSwitch: true,
+                    newTopic: 'continue_goals_chapters',
+                    newPhase: 'natural_continue_goals_chapters',
+                    confidence: 0.98,
+                    reason: 'user_selected_continue_goals',
+                    userInput: cleanOption
+                };
+            }
+            
+            if (cleanOption.includes('begin working') || cleanOption.includes('new chapter')) {
+                return {
+                    shouldSwitch: true,
+                    newTopic: 'begin_new_goals_chapters',
+                    newPhase: 'natural_begin_new_goals_chapters',
+                    confidence: 0.98,
+                    reason: 'user_selected_begin_new',
+                    userInput: cleanOption
+                };
+            }
+            
+            if (cleanOption.includes('reflect on my journey') || cleanOption.includes('document my progress') || cleanOption.includes('update my health numbers')) {
+                return {
+                    shouldSwitch: true,
+                    newTopic: 'reflection_progress_health',
+                    newPhase: 'natural_reflection_progress_health',
+                    confidence: 0.98,
+                    reason: 'user_selected_reflection',
+                    userInput: cleanOption
+                };
+            }
+            
+            if (cleanOption.includes('prepare for a visit') || cleanOption.includes('doctor visit')) {
+                return {
+                    shouldSwitch: true,
+                    newTopic: 'doctor_visit_preparation',
+                    newPhase: 'natural_doctor_visit_preparation',
+                    confidence: 0.98,
+                    reason: 'user_selected_doctor_prep',
+                    userInput: cleanOption
+                };
+            }
+            
+            if (cleanOption.includes('discuss what my doctor told me') || cleanOption.includes('doctor information')) {
+                return {
+                    shouldSwitch: true,
+                    newTopic: 'discuss_doctor_info',
+                    newPhase: 'natural_discuss_doctor_info',
+                    confidence: 0.98,
+                    reason: 'user_selected_doctor_discussion',
+                    userInput: cleanOption
+                };
+            }
+            
+            if (cleanOption.includes('update what matters to me') || cleanOption.includes('update my priorities')) {
+                return {
+                    shouldSwitch: true,
+                    newTopic: 'update_priorities',
+                    newPhase: 'natural_update_priorities',
+                    confidence: 0.98,
+                    reason: 'user_selected_update_priorities',
+                    userInput: cleanOption
+                };
+            }
+            
+            if (cleanOption.includes('something else') || cleanOption.includes('enter what you would like to do')) {
+                return {
+                    shouldSwitch: true,
+                    newTopic: 'something_else',
+                    newPhase: 'natural_something_else',
+                    confidence: 0.98,
+                    reason: 'user_selected_something_else',
                     userInput: cleanOption
                 };
             }
@@ -5904,6 +5983,49 @@ Given what we've discussed, how confident are you that you can address these con
                     topic: 'brain_health_concerns',
                     confidence: 0.95,
                     reason: 'health_concern'
+                },
+                // Main menu option patterns (comprehensive coverage)
+                {
+                    pattern: /(?:continue\s+working\s+to\s+)?(?:define\s+)?(?:my\s+)?(?:goals?\s+or\s+)?(?:life\s+)?(?:chapters?)/i,
+                    topic: 'continue_goals_chapters',
+                    confidence: 0.95,
+                    reason: 'user_wants_to_continue_goals'
+                },
+                {
+                    pattern: /(?:begin\s+working\s+to\s+)?(?:define\s+)?(?:my\s+)?(?:goals?\s+or\s+)?(?:a\s+new\s+)?(?:chapter)/i,
+                    topic: 'begin_new_goals_chapters',
+                    confidence: 0.95,
+                    reason: 'user_wants_to_begin_new'
+                },
+                {
+                    pattern: /(?:reflect\s+on\s+my\s+journey|document\s+my\s+progress|update\s+my\s+health\s+numbers)/i,
+                    topic: 'reflection_progress_health',
+                    confidence: 0.95,
+                    reason: 'user_wants_to_reflect'
+                },
+                {
+                    pattern: /(?:prepare\s+for\s+a\s+visit\s+with\s+my\s+doctor|prepare\s+for\s+doctor\s+visit)/i,
+                    topic: 'doctor_visit_preparation',
+                    confidence: 0.95,
+                    reason: 'user_wants_doctor_prep'
+                },
+                {
+                    pattern: /(?:discuss\s+what\s+my\s+doctor\s+told\s+me|discuss\s+doctor\s+information|information\s+they\s+gave\s+me)/i,
+                    topic: 'discuss_doctor_info',
+                    confidence: 0.95,
+                    reason: 'user_wants_to_discuss_doctor'
+                },
+                {
+                    pattern: /(?:update\s+what\s+matters\s+to\s+me|update\s+my\s+priorities)/i,
+                    topic: 'update_priorities',
+                    confidence: 0.95,
+                    reason: 'user_wants_to_update_priorities'
+                },
+                {
+                    pattern: /(?:something\s+else|enter\s+what\s+you\s+would\s+like\s+to\s+do)/i,
+                    topic: 'something_else',
+                    confidence: 0.95,
+                    reason: 'user_wants_something_else'
                 },
                 // Option selection patterns (when users click on provided options)
                 {
@@ -6221,6 +6343,69 @@ Given what we've discussed, how confident are you that you can address these con
                         "→ Continue with this topic",
                         "→ Choose a different option",
                         "→ Ask me something else"
+                    ]
+                },
+                continue_goals_chapters: {
+                    message: `Perfect! Let's continue working on your goals and life chapters. This is where your story really takes shape.`,
+                    options: [
+                        "→ Review my current goals",
+                        "→ Work on a specific goal",
+                        "→ Create a new life chapter",
+                        "→ See my progress so far"
+                    ]
+                },
+                begin_new_goals_chapters: {
+                    message: `Excellent! Starting something new is always exciting. Let's create something meaningful that aligns with what matters most to you.`,
+                    options: [
+                        "→ Set a new health goal",
+                        "→ Create a personal development goal",
+                        "→ Start a new life chapter",
+                        "→ Explore what kind of goal I need"
+                    ]
+                },
+                reflection_progress_health: {
+                    message: `Reflection is such a powerful tool for growth. Taking time to look back and document your journey helps you see how far you've come and what's working well.`,
+                    options: [
+                        "→ Review my overall journey",
+                        "→ Document recent progress",
+                        "→ Update my health numbers",
+                        "→ See patterns in my story"
+                    ]
+                },
+                doctor_visit_preparation: {
+                    message: `I'd love to help you feel prepared and confident for your doctor's visit! Being prepared can make such a difference in how you feel and how well your doctor can help you.`,
+                    options: [
+                        "→ Think through questions your doctor might ask",
+                        "→ Create a list of questions I want to ask",
+                        "→ Build an 'About Me Card' for my doctor",
+                        "→ Practice communicating my concerns"
+                    ]
+                },
+                discuss_doctor_info: {
+                    message: `Sometimes medical information can feel overwhelming, and it's perfectly normal to need time to process what you learned. I'm here to help you understand and work through it all.`,
+                    options: [
+                        "→ Talk through what my doctor explained",
+                        "→ Upload medical documents for help",
+                        "→ Define medical terms I don't understand",
+                        "→ Process how I'm feeling about it"
+                    ]
+                },
+                update_priorities: {
+                    message: `Life changes, and so do our priorities. It's completely normal to want to update what matters most to you. This helps me provide support that's truly aligned with your current values and circumstances.`,
+                    options: [
+                        "→ Add new things that bring me joy",
+                        "→ Remove something that no longer matters",
+                        "→ Update my concerns",
+                        "→ Change my confidence level"
+                    ]
+                },
+                something_else: {
+                    message: `Of course! I'm here to support whatever is on your mind today. Whether it's a specific concern, a question about brain health, or anything else that matters to you - I'm listening with full attention.`,
+                    options: [
+                        "→ Share a specific concern",
+                        "→ Ask a brain health question",
+                        "→ Talk about something personal",
+                        "→ Just chat and connect"
                     ]
                 }
             };
