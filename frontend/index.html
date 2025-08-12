@@ -707,6 +707,8 @@
             box-shadow: 0 4px 8px rgba(118, 75, 162, 0.4) !important;
             transform: translateY(-1px);
         }
+
+        .document-upload-button {
             font-size: 12px;
             color: #667eea;
             display: flex;
@@ -1481,6 +1483,230 @@
             response += context.followUp || "Tell me more about what this means for you.";
             
             return response;
+        }
+
+        // ============= TOKEN-EFFICIENT DOCUMENT PROCESSOR CLASS =============
+        class TokenEfficientDocumentProcessor {
+            constructor() {
+                this.chunkSize = 500; // characters per chunk
+                this.overlapSize = 50; // overlap between chunks
+            }
+            
+            async processDocument(text, filename) {
+                // 1. Create document summary WITHOUT LLM
+                const summary = this.createLocalSummary(text);
+                
+                // 2. Extract key information locally
+                const extracted = {
+                    medications: this.extractMedications(text),
+                    conditions: this.extractConditions(text),
+                    dates: this.extractDates(text),
+                    keyPhrases: this.extractKeyPhrases(text),
+                    documentType: this.classifyDocument(text)
+                };
+                
+                // 3. Create semantic chunks for Q&A
+                const chunks = this.createSemanticChunks(text);
+                
+                // 4. Store processed data (NO LLM CALLS YET)
+                return {
+                    id: 'doc_' + Date.now(),
+                    filename: filename,
+                    summary: summary, // 100-200 words max
+                    extracted: extracted,
+                    chunks: chunks, // For targeted Q&A
+                    fullTextHash: this.hashText(text), // For verification
+                    requiresLLM: false // Flag for when LLM needed
+                };
+            }
+            
+            createLocalSummary(text) {
+                const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+                const firstSentence = sentences[0] || '';
+                
+                const importantSentences = sentences.filter(s => 
+                    /diagnosis|prescribed|recommend|result|finding/i.test(s)
+                ).slice(0, 3);
+                
+                const summary = [firstSentence, ...importantSentences]
+                    .join(' ')
+                    .substring(0, 500);
+                    
+                return summary;
+            }
+            
+            extractMedications(text) {
+                const medPattern = /\b(?:mg|mcg|ml|tablet|capsule|daily|twice|three times)\b/gi;
+                const lines = text.split('\n');
+                const medications = [];
+                
+                lines.forEach(line => {
+                    if (medPattern.test(line) && line.length < 100) {
+                        medications.push(line.trim());
+                    }
+                });
+                
+                return [...new Set(medications)]; // Remove duplicates
+            }
+            
+            extractConditions(text) {
+                const conditions = [
+                    'diabetes', 'hypertension', 'high blood pressure', 'dementia',
+                    'alzheimer', 'memory loss', 'cognitive decline', 'depression',
+                    'anxiety', 'arthritis', 'heart disease', 'copd', 'asthma'
+                ];
+                
+                const found = [];
+                const lowerText = text.toLowerCase();
+                conditions.forEach(condition => {
+                    if (lowerText.includes(condition)) {
+                        found.push(condition);
+                    }
+                });
+                
+                return [...new Set(found)];
+            }
+            
+            extractDates(text) {
+                const datePattern = /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/g;
+                return text.match(datePattern) || [];
+            }
+            
+            extractKeyPhrases(text) {
+                // Simple key phrase extraction
+                const phrases = [];
+                const importantWords = ['diagnosis', 'treatment', 'medication', 'appointment', 
+                                       'recommendation', 'follow-up', 'results', 'findings'];
+                
+                const sentences = text.split(/[.!?]+/);
+                sentences.forEach(sentence => {
+                    const lower = sentence.toLowerCase();
+                    importantWords.forEach(word => {
+                        if (lower.includes(word)) {
+                            phrases.push(sentence.trim().substring(0, 100));
+                        }
+                    });
+                });
+                
+                return phrases.slice(0, 5); // Limit to 5 key phrases
+            }
+            
+            classifyDocument(text) {
+                const lowerText = text.toLowerCase();
+                
+                if (lowerText.includes('lab result') || lowerText.includes('test result')) {
+                    return 'lab_results';
+                } else if (lowerText.includes('prescription') || this.extractMedications(text).length > 2) {
+                    return 'prescription';
+                } else if (lowerText.includes('discharge') || lowerText.includes('summary')) {
+                    return 'medical_summary';
+                } else if (lowerText.includes('assessment') || lowerText.includes('evaluation')) {
+                    return 'medical_assessment';
+                } else if (lowerText.includes('invoice') || lowerText.includes('bill')) {
+                    return 'billing';
+                }
+                
+                return 'general_medical';
+            }
+            
+            createSemanticChunks(text) {
+                const chunks = [];
+                const sections = this.splitIntoSections(text);
+                
+                sections.forEach(section => {
+                    const sectionChunks = this.chunkText(section.content);
+                    sectionChunks.forEach((chunk, index) => {
+                        chunks.push({
+                            id: `${section.type}_${index}`,
+                            type: section.type,
+                            content: chunk,
+                            keywords: this.extractKeywords(chunk),
+                            charCount: chunk.length
+                        });
+                    });
+                });
+                
+                return chunks;
+            }
+            
+            splitIntoSections(text) {
+                const sections = [];
+                const patterns = {
+                    medications: /medications?|prescriptions?|drugs?/i,
+                    diagnosis: /diagnosis|findings?|impressions?/i,
+                    history: /history|background|past medical/i,
+                    labs: /lab|results?|values?|tests?/i,
+                    instructions: /instructions?|follow-up|return|call/i
+                };
+                
+                let currentSection = { type: 'general', content: '' };
+                const lines = text.split('\n');
+                
+                lines.forEach(line => {
+                    let sectionFound = false;
+                    for (const [type, pattern] of Object.entries(patterns)) {
+                        if (pattern.test(line)) {
+                            if (currentSection.content) {
+                                sections.push(currentSection);
+                            }
+                            currentSection = { type, content: line + '\n' };
+                            sectionFound = true;
+                            break;
+                        }
+                    }
+                    if (!sectionFound) {
+                        currentSection.content += line + '\n';
+                    }
+                });
+                
+                if (currentSection.content) {
+                    sections.push(currentSection);
+                }
+                
+                return sections;
+            }
+            
+            chunkText(text) {
+                const chunks = [];
+                let start = 0;
+                
+                while (start < text.length) {
+                    let end = start + this.chunkSize;
+                    
+                    // Try to break at sentence boundary
+                    if (end < text.length) {
+                        const nextPeriod = text.indexOf('.', end - 50);
+                        if (nextPeriod > 0 && nextPeriod < end + 50) {
+                            end = nextPeriod + 1;
+                        }
+                    }
+                    
+                    chunks.push(text.substring(start, end));
+                    start = end - this.overlapSize;
+                }
+                
+                return chunks;
+            }
+            
+            extractKeywords(text) {
+                // Simple keyword extraction
+                const words = text.toLowerCase().split(/\W+/);
+                const stopWords = ['the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but'];
+                return words
+                    .filter(w => w.length > 3 && !stopWords.includes(w))
+                    .slice(0, 0);
+            }
+            
+            hashText(text) {
+                // Simple hash for verification
+                let hash = 0;
+                for (let i = 0; i <text.length; i++) {
+                    const char = text.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                return hash.toString(16);
+            }
         }
 
         // Sofia's Response Patterns - Styling Guide for Consistent Interactions
