@@ -5004,6 +5004,190 @@ How would you like to strengthen your connections?`,
                 }
             }
 
+            // Movement Path Handlers
+            if (currentPhase === "movement_quest") {
+                if (lowerMessage.includes('daily walking') || lowerMessage.includes('walking adventures')) {
+                    currentPhase = "walking_exploration";
+                    
+                    // Link to About Me if relevant
+                    let walkingMessage = "";
+                    if (userHistory.aboutMe.bestLifeElements.some(e => 
+                        e.element.includes('Exercise') || 
+                        e.element.includes('outdoors') || 
+                        e.element.includes('independent'))) {
+                        walkingMessage = `Walking - what a perfect choice! It connects beautifully to what matters to you.\n\n`;
+                    } else {
+                        walkingMessage = `Daily walking adventures - I love this choice! Walking is one of the most powerful gifts you can give your brain.\n\n`;
+                    }
+                    
+                    walkingMessage += `Tell me, ${userHistory.profile.name}, what draws you to walking? Is it:
+
+- The freedom of movement and fresh air?
+- A desire to explore your neighborhood?
+- Something your doctor recommended?
+- A way to clear your mind?
+- Or something else entirely?
+
+Share what walking means to you, and we can shape an adventure that fits your life perfectly.`;
+                    
+                    showBotMessage(walkingMessage);
+                    return;
+                }
+                
+                if (lowerMessage.includes('gentle strength') || lowerMessage.includes('strength building')) {
+                    currentPhase = "strength_exploration";
+                    
+                    showBotMessage(
+                        `Gentle strength building - wise choice! Building strength isn't about lifting heavy weights; it's about maintaining the power to do what you love.
+
+What interests you about strength building? Maybe you want to:
+
+- Feel more confident carrying groceries
+- Get up from chairs more easily  
+- Feel stronger in your daily activities
+- Prevent falls and stay steady
+- Or perhaps you have a specific goal in mind?
+
+Tell me what strength means to you, and we'll create a plan that feels right.`
+                    );
+                    return;
+                }
+                
+                if (lowerMessage.includes('balance') || lowerMessage.includes('flexibility')) {
+                    currentPhase = "balance_exploration";
+                    
+                    showBotMessage(
+                        `Balance and flexibility - the foundation of confident movement! These skills help us navigate life with grace and security.
+
+I'm curious - what brought you to choose this? Are you:
+
+- Wanting to feel more steady on your feet?
+- Hoping to maintain your independence?
+- Interested in activities like yoga or tai chi?
+- Looking to prevent falls?
+- Or is there another reason?
+
+Share what balance means in your life, and we'll explore ways to strengthen it.`
+                    );
+                    return;
+                }
+                
+                if (lowerMessage.includes('joyful movement') || lowerMessage.includes('dancing')) {
+                    currentPhase = "joyful_movement_exploration";
+                    
+                    showBotMessage(
+                        `Joyful movement and dancing - how wonderful! When movement brings joy, it doesn't feel like exercise - it feels like celebration.
+
+What kind of joyful movement calls to you?
+
+- Dancing to your favorite music at home
+- Playing with grandchildren or pets
+- Gardening or outdoor activities
+- Swimming or water activities
+- Something else that makes you smile?
+
+Tell me what brings you joy when you move, and let's turn that into your brain health adventure!`
+                    );
+                    return;
+                }
+            }
+
+            // Handle walking exploration responses
+            if (currentPhase === "walking_exploration") {
+                // Store their motivation
+                logValue(`Walking motivation: ${message}`, 'high');
+                
+                let response = `I hear you - ${message.toLowerCase()}. That's a beautiful reason to walk.\n\n`;
+                
+                // Guide toward goal setting naturally
+                response += `Let's think about this together. If you could imagine your ideal walking routine, what would it look like?\n\n`;
+                
+                response += `For example:\n`;
+                response += `• A morning stroll to start your day with energy\n`;
+                response += `• An evening walk to unwind and reflect\n`;
+                response += `• Weekend adventures exploring new places\n`;
+                response += `• Short walks throughout the day to stay active\n\n`;
+                
+                response += `There's no right or wrong answer - just what feels good to you. What appeals to you most?`;
+                
+                showBotMessage(response);
+                currentPhase = "walking_routine_visioning";
+                return;
+            }
+
+            // Handle walking routine visioning
+            if (currentPhase === "walking_routine_visioning") {
+                // Natural progression to goal setting
+                let goalGuidance = `That sounds lovely! `;
+                
+                // Parse their response for specifics
+                const morningMention = lowerMessage.includes('morning');
+                const eveningMention = lowerMessage.includes('evening');
+                const dailyMention = lowerMessage.includes('daily') || lowerMessage.includes('every day');
+                
+                if (morningMention) {
+                    goalGuidance += `A morning walk can set such a positive tone for the whole day. `;
+                } else if (eveningMention) {
+                    goalGuidance += `Evening walks are perfect for processing the day and finding peace. `;
+                }
+                
+                goalGuidance += `\n\nNow, here's a thought - what if we turned this vision into something you could actually start this week? Nothing overwhelming, just a small, enjoyable step.\n\n`;
+                
+                goalGuidance += `What feels doable for you?\n`;
+                goalGuidance += `• A 5-minute walk around your home or yard\n`;
+                goalGuidance += `• A 10-minute stroll to the corner and back\n`;
+                goalGuidance += `• A 15-minute adventure in your neighborhood\n`;
+                goalGuidance += `• Or your own idea - any movement counts!\n\n`;
+                
+                goalGuidance += `Remember, the best walking plan is one you'll actually enjoy doing.`;
+                
+                showBotMessage(goalGuidance);
+                currentPhase = "walking_goal_formation";
+                return;
+            }
+
+            // Handle natural goal formation
+            if (currentPhase === "walking_goal_formation") {
+                // They've described what they want to do - help them make it a goal
+                let goalSuggestion = "";
+                
+                // Extract key elements from their response
+                if (lowerMessage.includes('5') || lowerMessage.includes('five')) {
+                    goalSuggestion = "Take a 5-minute walk";
+                } else if (lowerMessage.includes('10') || lowerMessage.includes('ten')) {
+                    goalSuggestion = "Take a 10-minute walk";
+                } else if (lowerMessage.includes('15') || lowerMessage.includes('fifteen')) {
+                    goalSuggestion = "Take a 15-minute walk";
+                } else {
+                    // Use their own words
+                    goalSuggestion = message;
+                }
+                
+                // Add frequency if not mentioned
+                if (!lowerMessage.includes('day') && !lowerMessage.includes('week')) {
+                    goalSuggestion += " three times this week";
+                }
+                
+                showBotMessage(
+                    `I love it! So your walking adventure could be: "${goalSuggestion}"
+
+This feels like a wonderful starting point - achievable, enjoyable, and perfect for your brain health.
+
+How does this feel to you? We can adjust it to make it just right, or if you're ready, we can make this your quest!`,
+                    [
+                        "→ Yes, this feels perfect!",
+                        "→ Let's adjust it a bit",
+                        "→ I want to think about it more",
+                        "→ Tell me how walking helps my brain"
+                    ]
+                );
+                
+                // Store the suggested goal temporarily
+                userHistory.suggestedGoal = goalSuggestion;
+                currentPhase = "goal_confirmation";
+                return;
+            }
+
             // Handle "Other" option
             if (lowerMessage.includes('other') && lowerMessage.includes('enter what you')) {
                 currentPhase = "custom_input";
