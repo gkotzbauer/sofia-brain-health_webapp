@@ -1897,6 +1897,44 @@
             }
         }
 
+        // Test function for Intent Recognition System
+        function testIntentRecognition() {
+            try {
+                console.log('🧪 Testing Intent Recognition System...');
+                
+                // Test if functions are available
+                console.log('📄 detectUserIntent available:', typeof detectUserIntent === 'function');
+                console.log('📄 detectTopicDivergence available:', typeof detectTopicDivergence === 'function');
+                console.log('📄 generateNaturalTopicSwitch available:', typeof generateNaturalTopicSwitch === 'function');
+                
+                // Test with sample messages
+                const testMessages = [
+                    "I want to talk about my health",
+                    "Can we discuss my family situation?",
+                    "I need help with work stress",
+                    "I'm worried about my emotions",
+                    "Let's talk about my goals"
+                ];
+                
+                console.log('🧪 Testing topic detection with sample messages...');
+                testMessages.forEach((message, index) => {
+                    console.log(`\n📝 Test ${index + 1}: "${message}"`);
+                    const intent = detectUserIntent(message, 'about_me_best_life');
+                    console.log('🎯 Intent result:', intent);
+                    
+                    if (intent.shouldSwitch) {
+                        const response = generateNaturalTopicSwitch(intent);
+                        console.log('💬 Generated response:', response);
+                    }
+                });
+                
+                console.log('\n✅ Intent Recognition System test completed!');
+                
+            } catch (error) {
+                console.error('❌ Intent Recognition test failed:', error);
+            }
+        }
+
 
 
         // ============= TOKEN-EFFICIENT Q&A CLASS =============
@@ -5689,6 +5727,301 @@ Given what we've discussed, how confident are you that you can address these con
             });
         }
 
+        // ============= CORE INTENT RECOGNITION SYSTEM =============
+        
+        // Detect when users want to discuss new topics naturally
+        function detectUserIntent(message, currentPhase) {
+            const lowerMessage = message.toLowerCase();
+            
+            // Store conversation context for potential return
+            if (!window.conversationMemory) {
+                window.conversationMemory = {
+                    previousTopic: null,
+                    previousPhase: null,
+                    previousOptions: null,
+                    userProgress: {},
+                    canReturn: true
+                };
+            }
+            
+            // Check for topic divergence from current conversation
+            const topicDivergence = detectTopicDivergence(lowerMessage, currentPhase);
+            
+            if (topicDivergence.shouldSwitch) {
+                // Preserve current conversation context
+                window.conversationMemory.previousTopic = currentPhase;
+                window.conversationMemory.previousPhase = currentPhase;
+                window.conversationMemory.previousOptions = getCurrentOptions();
+                window.conversationMemory.userProgress = getUserProgress();
+                
+                return {
+                    shouldSwitch: true,
+                    newTopic: topicDivergence.newTopic,
+                    newPhase: topicDivergence.newPhase,
+                    confidence: topicDivergence.confidence,
+                    reason: topicDivergence.reason
+                };
+            }
+            
+            return { shouldSwitch: false };
+        }
+        
+        // Detect when user input diverges from offered options
+        function detectTopicDivergence(userInput, currentPhase) {
+            const lowerInput = userInput.toLowerCase();
+            
+            // Common topic indicators that suggest user wants to discuss something else
+            const topicIndicators = {
+                // Health and medical topics
+                health: ['health', 'medical', 'doctor', 'appointment', 'symptoms', 'pain', 'medication', 'treatment'],
+                documents: ['document', 'paper', 'report', 'results', 'lab', 'test', 'prescription', 'medical record'],
+                family: ['family', 'child', 'parent', 'spouse', 'partner', 'relationship', 'marriage'],
+                work: ['work', 'job', 'career', 'boss', 'colleague', 'meeting', 'project', 'stress'],
+                emotions: ['emotion', 'sad', 'happy', 'angry', 'anxious', 'depressed', 'worried'],
+                daily_life: ['daily', 'routine', 'schedule', 'time', 'busy', 'tired', 'energy', 'sleep'],
+                goals: ['goal', 'plan', 'future', 'dream', 'aspiration', 'ambition', 'achievement'],
+                challenges: ['problem', 'challenge', 'difficulty', 'struggle', 'obstacle', 'barrier', 'issue']
+            };
+            
+            // Check if user input contains topic indicators
+            for (const [topic, keywords] of Object.entries(topicIndicators)) {
+                const hasTopicKeywords = keywords.some(keyword => lowerInput.includes(keyword));
+                const isRelevantToCurrentPhase = isTopicRelevantToPhase(topic, currentPhase);
+                
+                if (hasTopicKeywords && !isRelevantToCurrentPhase) {
+                    return {
+                        shouldSwitch: true,
+                        newTopic: topic,
+                        newPhase: `natural_${topic}`,
+                        confidence: calculateConfidence(lowerInput, keywords),
+                        reason: 'user_introduced_new_topic'
+                    };
+                }
+            }
+            
+            // Check for explicit topic change requests
+            const explicitChanges = [
+                'i want to talk about', 'can we discuss', 'i need help with',
+                'let\'s talk about', 'i have a question about', 'i\'m worried about'
+            ];
+            
+            for (const changePhrase of explicitChanges) {
+                if (lowerInput.includes(changePhrase)) {
+                    const extractedTopic = extractTopicFromPhrase(lowerInput, changePhrase);
+                    if (extractedTopic) {
+                        return {
+                            shouldSwitch: true,
+                            newTopic: extractedTopic,
+                            newPhase: `natural_${extractedTopic}`,
+                            confidence: 0.9,
+                            reason: 'explicit_topic_change'
+                        };
+                    }
+                }
+            }
+            
+            return { shouldSwitch: false };
+        }
+        
+        // Check if a topic is relevant to the current conversation phase
+        function isTopicRelevantToPhase(topic, currentPhase) {
+            const phaseTopicMapping = {
+                'about_me_best_life': ['goals', 'daily_life', 'emotions'],
+                'about_me_concerns': ['challenges', 'emotions', 'health'],
+                'goal_definition': ['goals', 'work', 'daily_life'],
+                'sleep_quest': ['health', 'daily_life', 'emotions'],
+                'connection_quest': ['family', 'relationships', 'social'],
+                'document_qa': ['documents', 'health', 'medical'],
+                'natural_conversation': ['all'] // Allow any topic in natural conversation
+            };
+            
+            const relevantTopics = phaseTopicMapping[currentPhase] || [];
+            return relevantTopics.includes('all') || relevantTopics.includes(topic);
+        }
+        
+        // Calculate confidence score for topic detection
+        function calculateConfidence(userInput, keywords) {
+            const matchedKeywords = keywords.filter(keyword => userInput.includes(keyword));
+            const baseConfidence = matchedKeywords.length / keywords.length;
+            
+            // Boost confidence for longer, more specific inputs
+            const lengthBonus = Math.min(userInput.length / 100, 0.3);
+            
+            return Math.min(baseConfidence + lengthBonus, 1.0);
+        }
+        
+        // Extract topic from explicit change phrases
+        function extractTopicFromPhrase(userInput, changePhrase) {
+            const afterPhrase = userInput.substring(userInput.indexOf(changePhrase) + changePhrase.length);
+            const words = afterPhrase.trim().split(/\s+/);
+            
+            // Look for topic keywords in the words after the change phrase
+            const topicKeywords = [
+                'health', 'family', 'work', 'emotions', 'goals', 'challenges',
+                'documents', 'medical', 'relationships', 'daily', 'sleep', 'stress'
+            ];
+            
+            for (const word of words) {
+                if (topicKeywords.includes(word)) {
+                    return word;
+                }
+            }
+            
+            // If no specific topic found, return the first few words as a general topic
+            return words.slice(0, 3).join('_');
+        }
+        
+        // Get current conversation options for context preservation
+        function getCurrentOptions() {
+            // This would need to be implemented based on how options are currently displayed
+            // For now, return a placeholder
+            return ['current_option_1', 'current_option_2'];
+        }
+        
+        // Get user progress in current conversation
+        function getUserProgress() {
+            // This would capture the user's progress in the current conversation
+            return {
+                phase: currentPhase,
+                timestamp: new Date().toISOString(),
+                messageCount: (window.messageCount || 0)
+            };
+        }
+        
+        // Generate natural responses for topic switches
+        function generateNaturalTopicSwitch(intentRecognition) {
+            const { newTopic, confidence, reason } = intentRecognition;
+            
+            // High confidence topic switches get immediate engagement
+            if (confidence > 0.7) {
+                return generateHighConfidenceResponse(newTopic);
+            }
+            
+            // Medium confidence gets gentle confirmation
+            if (confidence > 0.4) {
+                return generateMediumConfidenceResponse(newTopic);
+            }
+            
+            // Low confidence gets clarification
+            return generateLowConfidenceResponse(newTopic);
+        }
+        
+        // Generate high confidence responses for clear topic switches
+        function generateHighConfidenceResponse(topic) {
+            const responses = {
+                health: {
+                    message: "Of course! Your health is important and I'm here to help. What specific health concern would you like to discuss?",
+                    options: [
+                        "→ Tell me about your symptoms",
+                        "→ Discuss your doctor's visit",
+                        "→ Talk about medications",
+                        "→ Something else health-related"
+                    ]
+                },
+                documents: {
+                    message: "Absolutely! I'd be happy to help you understand your medical documents. What kind of document are you working with?",
+                    options: [
+                        "→ Lab results or test reports",
+                        "→ Doctor's notes or prescriptions",
+                        "→ Medical bills or insurance",
+                        "→ Other medical documents"
+                    ]
+                },
+                family: {
+                    message: "Family relationships are so important! I'd love to hear about what's on your mind. What would you like to discuss?",
+                    options: [
+                        "→ Relationship challenges",
+                        "→ Family health concerns",
+                        "→ Communication issues",
+                        "→ Family celebrations or milestones"
+                    ]
+                },
+                work: {
+                    message: "Work can be such a big part of our lives and stress. What work-related topic would you like to explore?",
+                    options: [
+                        "→ Work stress or challenges",
+                        "→ Career goals or changes",
+                        "→ Work-life balance",
+                        "→ Colleague relationships"
+                    ]
+                },
+                emotions: {
+                    message: "Your emotional well-being matters so much. I'm here to listen and support you. What are you feeling?",
+                    options: [
+                        "→ Recent emotional challenges",
+                        "→ Mood changes or patterns",
+                        "→ Stress or anxiety",
+                        "→ Positive emotions to celebrate"
+                    ]
+                },
+                daily_life: {
+                    message: "Daily life has so many moving parts! What aspect of your routine would you like to discuss?",
+                    options: [
+                        "→ Time management challenges",
+                        "→ Daily stress or overwhelm",
+                        "→ Routine improvements",
+                        "→ Daily achievements or wins"
+                    ]
+                },
+                goals: {
+                    message: "Goals give us direction and purpose! What goal or aspiration would you like to work on?",
+                    options: [
+                        "→ Health and wellness goals",
+                        "→ Personal development goals",
+                        "→ Relationship goals",
+                        "→ Career or life goals"
+                    ]
+                },
+                challenges: {
+                    message: "Challenges are part of growth, and you don't have to face them alone. What challenge are you working through?",
+                    options: [
+                        "→ Health challenges",
+                        "→ Relationship difficulties",
+                        "→ Work or career obstacles",
+                        "→ Personal development challenges"
+                    ]
+                }
+            };
+            
+            return responses[topic] || generateGenericResponse(topic);
+        }
+        
+        // Generate medium confidence responses for potential topic switches
+        function generateMediumConfidenceResponse(topic) {
+            return {
+                message: `I think you might want to discuss ${topic.replace('_', ' ')}. Is that right? I'd be happy to help with that topic.`,
+                options: [
+                    `→ Yes, let's talk about ${topic.replace('_', ' ')}`,
+                    "→ Actually, I want to continue our current conversation",
+                    "→ I want to discuss something else entirely"
+                ]
+            };
+        }
+        
+        // Generate low confidence responses for unclear topic switches
+        function generateLowConfidenceResponse(topic) {
+            return {
+                message: "I want to make sure I understand what you'd like to discuss. Could you tell me a bit more about what's on your mind?",
+                options: [
+                    "→ I want to discuss something specific",
+                    "→ I want to continue our current conversation",
+                    "→ I'm not sure what I want to discuss"
+                ]
+            };
+        }
+        
+        // Generate generic response for unrecognized topics
+        function generateGenericResponse(topic) {
+            return {
+                message: `I'd be happy to help you with ${topic.replace('_', ' ')}! What would you like to discuss about this topic?`,
+                options: [
+                    "→ Tell me more about this",
+                    "→ I have specific questions",
+                    "→ Let's explore this together"
+                ]
+            };
+        }
+
         async function processUserMessage(message) {
             const lowerMessage = message.toLowerCase();
             
@@ -5699,6 +6032,18 @@ Given what we've discussed, how confident are you that you can address these con
                 if (safetyResponse) {
                     showBotMessage(safetyResponse);
                     updateSessionRiskAssessment();
+                    return;
+                }
+            }
+
+            // CORE INTENT RECOGNITION - Detect when users want to discuss new topics
+            const intentRecognition = detectUserIntent(message, currentPhase);
+            if (intentRecognition.shouldSwitch) {
+                console.log('🎯 Intent recognition: User wants to discuss new topic:', intentRecognition.newTopic);
+                const naturalResponse = generateNaturalTopicSwitch(intentRecognition);
+                if (naturalResponse) {
+                    showBotMessage(naturalResponse.message, naturalResponse.options);
+                    currentPhase = intentRecognition.newPhase || "natural_conversation";
                     return;
                 }
             }
