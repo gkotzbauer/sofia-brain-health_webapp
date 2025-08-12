@@ -1250,10 +1250,12 @@
                 </div>
                 <div id="memoryList"></div>
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-                    <button class="memory-action-btn" onclick="createStoryCompilation()" style="margin-right: 10px;">📚 Create Story</button>
-                    <button class="memory-action-btn" onclick="downloadMemorySummary()" style="margin-right: 10px;">📄 Export Summary</button>
-                    <button class="memory-action-btn" onclick="downloadUserHistory()" style="margin-right: 10px;">📥 Export All Data</button>
-                    <button class="memory-action-btn delete" onclick="clearAllData()">🗑️ Clear All Data</button>
+                            <button class="memory-action-btn" onclick="createStoryCompilation()" style="margin-right: 10px;">📚 Create Story</button>
+        <button class="memory-action-btn" onclick="downloadMemorySummary()" style="margin-right: 10px;">📄 Export Summary</button>
+        <button class="memory-action-btn" onclick="downloadUserHistory()" style="margin-right: 10px;">📥 Export All Data</button>
+        <button class="memory-action-btn" onclick="showBrainHealthSummary()" style="margin-right: 10px;">🧠 Brain Health Summary</button>
+        <button class="memory-action-btn" onclick="buildBrainHealthChapter()" style="margin-right: 10px;">📖 Build Chapter</button>
+        <button class="memory-action-btn delete" onclick="clearAllData()">🗑️ Clear All Data</button>
                 </div>
             </div>
         </div>
@@ -1711,6 +1713,7 @@
             constructor() {
                 this.responseTemplates = this.initializeResponseTemplates();
                 this.optionTemplates = this.initializeOptionTemplates();
+                this.loggingEnabled = true; // Enable automatic logging
             }
             
             initializeResponseTemplates() {
@@ -2026,6 +2029,11 @@ Understanding the relationship between medications and brain health can help you
                     return null;
                 }
                 
+                // Log the user's intent and goal for future reference
+                if (this.loggingEnabled) {
+                    await this.logUserIntent(intent, context, state);
+                }
+                
                 // Generate the response
                 const response = {
                     message: template.message,
@@ -2038,6 +2046,69 @@ Understanding the relationship between medications and brain health can help you
                 
                 console.log('🎯 Generated Response:', response);
                 return response;
+            }
+            
+            async logUserIntent(intent, context, state) {
+                try {
+                    const { patternKey, userInput, confidence } = intent;
+                    
+                    // Log based on the type of intent
+                    switch (patternKey) {
+                        case 'memoryThinkingSkillsGoal':
+                            await logGoal('Improve memory and thinking skills', 8, ['cognitive_health']);
+                            await logConcern('Memory and cognitive function improvement', 'moderate', 'user_goal');
+                            break;
+                            
+                        case 'cognitiveDeclinePreventionGoal':
+                            await logGoal('Prevent cognitive decline', 8, ['long_term_health', 'prevention']);
+                            await logConcern('Cognitive decline prevention', 'moderate', 'user_goal');
+                            break;
+                            
+                        case 'supportOthersBrainHealthGoal':
+                            await logGoal('Support others with brain health', 8, ['caregiving', 'family_support']);
+                            await logValue('Supporting others', 'high');
+                            break;
+                            
+                        case 'medicalDecisionPreparationGoal':
+                            await logGoal('Prepare for medical decisions', 8, ['medical_preparation', 'health_advocacy']);
+                            await logConcern('Medical decision preparation', 'moderate', 'user_goal');
+                            break;
+                            
+                        case 'brainHealthLearning':
+                            await logGoal('Learn about brain health', 7, ['education', 'self_improvement']);
+                            break;
+                            
+                        case 'goalClarification':
+                            await logGoal('Create personalized learning plan', 7, ['planning', 'personalization']);
+                            break;
+                            
+                        case 'specificConcern':
+                            await logConcern('Specific brain health concern', 'moderate', 'user_identified');
+                            break;
+                            
+                        case 'documentHelp':
+                            await logGoal('Understand medical documents', 7, ['document_understanding', 'medical_literacy']);
+                            break;
+                            
+                        case 'needClarification':
+                            await logConcern('Uncertainty about brain health needs', 'low', 'user_clarification');
+                            break;
+                            
+                        case 'storyBuilding':
+                            await logGoal('Build brain health story', 8, ['storytelling', 'self_reflection']);
+                            break;
+                            
+                        default:
+                            // Log generic intent
+                            await logGoal(userInput, 6, ['conversation_intent']);
+                            break;
+                    }
+                    
+                    console.log('📝 Logged user intent:', patternKey, 'with confidence:', confidence);
+                    
+                } catch (error) {
+                    console.error('❌ Error logging user intent:', error);
+                }
             }
         }
         
@@ -2070,6 +2141,9 @@ Understanding the relationship between medications and brain health can help you
                     return null; // Fall back to existing handlers
                 }
                 
+                // Log user's specific response for follow-up questions
+                await this.logUserResponse(userInput, intent, currentPhase, userHistory);
+                
                 // Return the generated response for processing
                 return {
                     shouldSwitch: true,
@@ -2083,6 +2157,81 @@ Understanding the relationship between medications and brain health can help you
                         options: response.options
                     }
                 };
+            }
+            
+            async logUserResponse(userInput, intent, currentPhase, userHistory) {
+                try {
+                    const { patternKey, responseType } = intent;
+                    
+                    // Log based on the current phase and user's response
+                    switch (currentPhase) {
+                        case 'memory_thinking_skills_planning':
+                            if (userInput.toLowerCase().includes('memory challenges')) {
+                                await logConcern('Experiencing memory challenges', 'moderate', 'user_identified');
+                                await logGoal('Address specific memory challenges', 8, ['memory_improvement']);
+                            } else if (userInput.toLowerCase().includes('enhance cognitive')) {
+                                await logGoal('Enhance current cognitive abilities', 8, ['cognitive_enhancement']);
+                            } else if (userInput.toLowerCase().includes('preparing for goal')) {
+                                await logGoal('Prepare for specific goal or challenge', 8, ['goal_preparation']);
+                            } else if (userInput.toLowerCase().includes('cognitive changes')) {
+                                await logConcern('Noticed cognitive changes', 'moderate', 'user_identified');
+                                await logGoal('Address cognitive changes', 8, ['cognitive_health']);
+                            }
+                            break;
+                            
+                        case 'cognitive_decline_prevention_planning':
+                            if (userInput.toLowerCase().includes('family history')) {
+                                await logConcern('Family history of cognitive decline', 'high', 'genetic_risk');
+                                await logGoal('Address genetic risk factors', 9, ['prevention', 'genetic_risk']);
+                            } else if (userInput.toLowerCase().includes('maintain cognitive')) {
+                                await logGoal('Maintain current cognitive abilities', 8, ['cognitive_maintenance']);
+                            } else if (userInput.toLowerCase().includes('early warning')) {
+                                await logConcern('Experiencing early warning signs', 'high', 'early_detection');
+                                await logGoal('Address early warning signs', 9, ['early_intervention']);
+                            } else if (userInput.toLowerCase().includes('cognitive resilience')) {
+                                await logGoal('Build cognitive resilience', 8, ['resilience_building']);
+                            }
+                            break;
+                            
+                        case 'support_others_brain_health_planning':
+                            if (userInput.toLowerCase().includes('family member')) {
+                                await logValue('Family support', 'high');
+                                await logGoal('Support family member with cognitive changes', 8, ['caregiving']);
+                            } else if (userInput.toLowerCase().includes('maintain brain health')) {
+                                await logGoal('Help others maintain brain health', 8, ['preventive_support']);
+                            } else if (userInput.toLowerCase().includes('caregiver')) {
+                                await logValue('Caregiving', 'high');
+                                await logGoal('Find caregiver strategies and resources', 8, ['caregiver_support']);
+                            } else if (userInput.toLowerCase().includes('diagnosis or treatment')) {
+                                await logGoal('Support through diagnosis or treatment', 8, ['medical_support']);
+                            }
+                            break;
+                            
+                        case 'medical_decision_preparation_planning':
+                            if (userInput.toLowerCase().includes('doctor appointment')) {
+                                await logGoal('Prepare for doctor appointment about cognitive concerns', 8, ['medical_preparation']);
+                            } else if (userInput.toLowerCase().includes('treatment options')) {
+                                await logGoal('Make decisions about treatment options', 8, ['medical_decision_making']);
+                            } else if (userInput.toLowerCase().includes('medications')) {
+                                await logGoal('Consider starting or changing medications', 8, ['medication_management']);
+                            } else if (userInput.toLowerCase().includes('test results')) {
+                                await logGoal('Understand test results or diagnoses', 8, ['medical_literacy']);
+                            }
+                            break;
+                            
+                        default:
+                            // Log generic response for future analysis
+                            if (userInput.length > 10) { // Only log substantial responses
+                                await logGoal(userInput, 6, ['user_response', currentPhase]);
+                            }
+                            break;
+                    }
+                    
+                    console.log('📝 Logged user response for phase:', currentPhase, 'with input:', userInput.substring(0, 50) + '...');
+                    
+                } catch (error) {
+                    console.error('❌ Error logging user response:', error);
+                }
             }
             
             getCurrentConversationContext() {
@@ -2102,6 +2251,187 @@ Understanding the relationship between medications and brain health can help you
         
         // Initialize the universal conversation system
         const universalConversationManager = new ConversationFlowManager();
+        
+        // ============= BRAIN HEALTH STORY BUILDER =============
+        // Functions to build brain health chapters and stories from logged user data
+        
+        async function buildBrainHealthChapter(userHistory) {
+            try {
+                // Get all logged goals, concerns, and values related to brain health
+                const brainHealthGoals = userHistory.goals.filter(g => 
+                    g.goal.toLowerCase().includes('memory') ||
+                    g.goal.toLowerCase().includes('cognitive') ||
+                    g.goal.toLowerCase().includes('brain') ||
+                    g.goal.toLowerCase().includes('thinking')
+                );
+                
+                const brainHealthConcerns = userHistory.concerns.filter(c => 
+                    c.concern.toLowerCase().includes('memory') ||
+                    c.concern.toLowerCase().includes('cognitive') ||
+                    c.concern.toLowerCase().includes('brain') ||
+                    c.concern.toLowerCase().includes('thinking')
+                );
+                
+                const brainHealthValues = userHistory.values.filter(v => 
+                    v.value.toLowerCase().includes('health') ||
+                    v.value.toLowerCase().includes('support') ||
+                    v.value.toLowerCase().includes('family') ||
+                    v.value.toLowerCase().includes('care')
+                );
+                
+                if (brainHealthGoals.length === 0 && brainHealthConcerns.length === 0) {
+                    return {
+                        canBuild: false,
+                        message: "I don't have enough information yet to build a brain health chapter. Let's continue our conversation so I can learn more about your goals and concerns."
+                    };
+                }
+                
+                // Create chapter content based on logged data
+                const chapterContent = {
+                    title: "My Brain Health Journey",
+                    goals: brainHealthGoals.map(g => g.goal),
+                    concerns: brainHealthConcerns.map(c => c.concern),
+                    values: brainHealthValues.map(v => v.value),
+                    timestamp: new Date().toISOString(),
+                    phase: 'brain_health_chapter'
+                };
+                
+                // Add to user history
+                userHistory.storyChapters.push(chapterContent);
+                saveUserHistory();
+                
+                return {
+                    canBuild: true,
+                    chapter: chapterContent,
+                    message: `Perfect! I've created a brain health chapter based on what I've learned about you. Here's what I captured:
+
+**Your Brain Health Goals:**
+${brainHealthGoals.map(g => `• ${g.goal}`).join('\n')}
+
+**Your Concerns:**
+${brainHealthConcerns.map(c => `• ${c.concern}`).join('\n')}
+
+**What Matters Most to You:**
+${brainHealthValues.map(v => `• ${v.value}`).join('\n')}
+
+This chapter will help us track your progress and create a personalized plan for your brain health journey. Would you like to add more details or work on specific goals?`
+                };
+                
+            } catch (error) {
+                console.error('❌ Error building brain health chapter:', error);
+                return {
+                    canBuild: false,
+                    message: "I encountered an error while building your brain health chapter. Let me try again or we can continue building it step by step."
+                };
+            }
+        }
+        
+        async function getBrainHealthSummary(userHistory) {
+            try {
+                const summary = {
+                    totalGoals: userHistory.goals.filter(g => 
+                        g.goal.toLowerCase().includes('memory') ||
+                        g.goal.toLowerCase().includes('cognitive') ||
+                        g.goal.toLowerCase().includes('brain') ||
+                        g.goal.toLowerCase().includes('thinking')
+                    ).length,
+                    
+                    totalConcerns: userHistory.concerns.filter(c => 
+                        c.concern.toLowerCase().includes('memory') ||
+                        c.concern.toLowerCase().includes('cognitive') ||
+                        c.concern.toLowerCase().includes('brain') ||
+                        c.concern.toLowerCase().includes('thinking')
+                    ).length,
+                    
+                    recentActivity: userHistory.goals
+                        .filter(g => g.setDate > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+                        .map(g => g.goal),
+                    
+                    topPriorities: userHistory.goals
+                        .filter(g => g.confidence >= 8)
+                        .map(g => g.goal)
+                        .slice(0, 3)
+                };
+                
+                return summary;
+                
+            } catch (error) {
+                console.error('❌ Error getting brain health summary:', error);
+                return null;
+            }
+        }
+        
+        // ============= END BRAIN HEALTH STORY BUILDER =============
+        
+        // ============= BRAIN HEALTH DISPLAY FUNCTIONS =============
+        // Functions called by the UI buttons to show logged information
+        
+        async function showBrainHealthSummary() {
+            try {
+                const summary = await getBrainHealthSummary(userHistory);
+                
+                if (!summary) {
+                    showBotMessage("I'm having trouble retrieving your brain health summary. Let me try again or we can continue building it through our conversation.");
+                    return;
+                }
+                
+                const message = `Here's what I've learned about your brain health journey so far:
+
+**📊 Summary:**
+• Total Brain Health Goals: ${summary.totalGoals}
+• Total Concerns Identified: ${summary.totalConcerns}
+
+**🎯 Top Priorities (High Confidence):**
+${summary.topPriorities.length > 0 ? summary.topPriorities.map(g => `• ${g}`).join('\n') : '• No high-priority goals set yet'}
+
+**📅 Recent Activity (Last 7 Days):**
+${summary.recentActivity.length > 0 ? summary.recentActivity.map(g => `• ${g}`).join('\n') : '• No recent activity'}
+
+**💡 What This Means:**
+I'm building a comprehensive understanding of your brain health goals and concerns. This information helps me provide more personalized guidance and track your progress over time.
+
+Would you like me to build a brain health chapter from this information, or would you prefer to continue our conversation to gather more details?`;
+                
+                showBotMessage(message, [
+                    "→ Build a brain health chapter now",
+                    "→ Continue our conversation to add more details",
+                    "→ Show me my specific goals and concerns",
+                    "→ Export this information"
+                ]);
+                
+            } catch (error) {
+                console.error('❌ Error showing brain health summary:', error);
+                showBotMessage("I encountered an error while retrieving your brain health summary. Let me try again or we can continue building it through our conversation.");
+            }
+        }
+        
+        async function buildBrainHealthChapter() {
+            try {
+                const result = await buildBrainHealthChapter(userHistory);
+                
+                if (result.canBuild) {
+                    showBotMessage(result.message, [
+                        "→ Add more details to this chapter",
+                        "→ Work on specific goals from this chapter",
+                        "→ Create action plans for my concerns",
+                        "→ View my complete brain health story"
+                    ]);
+                } else {
+                    showBotMessage(result.message, [
+                        "→ Continue our conversation about brain health",
+                        "→ Tell me about your specific goals",
+                        "→ Share your concerns with me",
+                        "→ Start with a different topic"
+                    ]);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error building brain health chapter:', error);
+                showBotMessage("I encountered an error while building your brain health chapter. Let me try again or we can continue building it step by step.");
+            }
+        }
+        
+        // ============= END BRAIN HEALTH DISPLAY FUNCTIONS =============
         
         // ============= END UNIVERSAL CONVERSATION SYSTEM =============
 
