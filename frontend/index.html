@@ -5752,7 +5752,12 @@ Given what we've discussed, how confident are you that you can address these con
             // First, check if this is ANY option selection
             if (message.startsWith('→')) {
                 console.log('🎯 Detected option selection:', message);
-                const anyOption = handleAnyOption(message);
+                
+                // Get current conversation context for context-aware responses
+                const currentContext = getCurrentConversationContext();
+                console.log('🎯 Current conversation context:', currentContext);
+                
+                const anyOption = handleAnyOption(message, currentContext);
                 if (anyOption) {
                     // Preserve current conversation context
                     window.conversationMemory.previousTopic = currentPhase;
@@ -5795,20 +5800,83 @@ Given what we've discussed, how confident are you that you can address these con
             return { shouldSwitch: false };
         }
         
-        // UNIVERSAL option handler for ANY option selection
-        function handleAnyOption(optionText) {
+        // Get current conversation context for context-aware responses
+        function getCurrentConversationContext() {
+            // Get the last few bot messages to understand context
+            const chatContainer = document.getElementById('chatContainer');
+            if (!chatContainer) return null;
+            
+            const botMessages = chatContainer.querySelectorAll('.bot-message');
+            if (botMessages.length === 0) return null;
+            
+            // Get the last 2-3 bot messages to understand context
+            const recentMessages = Array.from(botMessages).slice(-3);
+            const contextText = recentMessages.map(msg => msg.textContent || msg.innerText).join(' ').toLowerCase();
+            
+            console.log('🎯 Extracted context from recent messages:', contextText);
+            return contextText;
+        }
+        
+        // UNIVERSAL option handler for ANY option selection with CONTEXT PRESERVATION
+        function handleAnyOption(optionText, currentContext = null) {
             const cleanOption = optionText.replace(/^→\s+/, '').toLowerCase();
             console.log('🎯 Processing ANY option:', cleanOption);
+            console.log('🎯 Current context:', currentContext);
             
             // Generate a unique topic ID based on the option content
             const topicId = 'option_' + cleanOption.replace(/[^a-z0-9]/g, '_').substring(0, 30);
             
-            // Create a dynamic, empathetic response based on the option content
+            // Create a dynamic, empathetic response based on the option content AND context
             let message = '';
             let options = [];
             
-            // Analyze the option content and generate appropriate responses
-            if (cleanOption.includes('doctor') || cleanOption.includes('medical') || cleanOption.includes('health')) {
+            // CONTEXT-AWARE RESPONSES - Build on previous conversation
+            if (currentContext && currentContext.includes('document') && currentContext.includes('medical')) {
+                // We're in a document discussion context
+                if (cleanOption.includes('upload') || cleanOption.includes('review')) {
+                    message = `Perfect! Uploading a document is a great next step. I can help you understand what's in it and answer any questions you have. Feel free to use the upload button in the bottom right corner of the page.`;
+                    options = [
+                        "→ I've uploaded the document",
+                        "→ I need help with the upload process",
+                        "→ Tell me more about how this works",
+                        "→ I changed my mind - let's discuss something else"
+                    ];
+                } else if (cleanOption.includes('questions') || cleanOption.includes('terms')) {
+                    message = `Great idea! Medical documents often contain terms that can be confusing. I'm here to help you understand what everything means so you feel more confident about your health information.`;
+                    options = [
+                        "→ Help me understand medical terms",
+                        "→ Ask about specific parts of the document",
+                        "→ Discuss what the information means for me",
+                        "→ Learn how to ask better questions"
+                    ];
+                } else if (cleanOption.includes('learned') || cleanOption.includes('discuss')) {
+                    message = `Absolutely! Sometimes it helps to talk through what you've learned from medical documents. This can help you process the information and understand how it affects your health decisions.`;
+                    options = [
+                        "→ Talk through what I understood",
+                        "→ Ask questions about what I read",
+                        "→ Discuss how this affects my health",
+                        "→ Plan next steps based on this information"
+                    ];
+                } else if (cleanOption.includes('organize') || cleanOption.includes('organizing')) {
+                    message = `Excellent! Organizing medical information can make it much easier to manage your health. I can help you create a system that works for you and makes future doctor visits more productive.`;
+                    options = [
+                        "→ Help me organize my medical documents",
+                        "→ Create a system for tracking information",
+                        "→ Learn how to prepare for doctor visits",
+                        "→ Build a health summary for my records"
+                    ];
+                } else {
+                    // Generic document context response
+                    message = `I'm here to help you with that document! Since we're discussing medical documents, I want to make sure you get the support you need to understand and work with this information.`;
+                    options = [
+                        "→ Upload the document for review",
+                        "→ Ask questions about medical terms",
+                        "→ Discuss what I learned from it",
+                        "→ Get help organizing my information"
+                    ];
+                }
+            } else if (currentContext && currentContext.includes('doctor') && currentContext.includes('visit')) {
+                // We're in a doctor visit preparation context
                 if (cleanOption.includes('questions') || cleanOption.includes('ask')) {
                     message = `Great idea! Thinking through questions your doctor might ask is such a smart way to prepare. This helps you feel more confident and ensures you don't forget anything important during your visit.`;
                     options = [
@@ -5842,81 +5910,118 @@ Given what we've discussed, how confident are you that you can address these con
                         "→ Address any concerns you have"
                     ];
                 }
-            } else if (cleanOption.includes('brain') || cleanOption.includes('memory') || cleanOption.includes('cognitive')) {
-                if (cleanOption.includes('basics') || cleanOption.includes('fundamentals')) {
-                    message = `Wonderful! Understanding the basics of brain health gives you a solid foundation for taking care of yourself. Knowledge is power when it comes to your brain health.`;
+            } else {
+                // Fallback to content-based responses when no specific context
+                if (cleanOption.includes('doctor') || cleanOption.includes('medical') || cleanOption.includes('health')) {
+                    if (cleanOption.includes('questions') || cleanOption.includes('ask')) {
+                        message = `Great idea! Thinking through questions your doctor might ask is such a smart way to prepare. This helps you feel more confident and ensures you don't forget anything important during your visit.`;
+                        options = [
+                            "→ Help me think of common questions",
+                            "→ Practice answering specific questions",
+                            "→ Create a list to take with me",
+                            "→ Discuss what makes me nervous about questions"
+                        ];
+                    } else if (cleanOption.includes('concerns') || cleanOption.includes('communicate')) {
+                        message = `Excellent! Practicing how to communicate your concerns clearly is so important. Your doctor wants to help you, and being able to explain what's happening makes that much easier.`;
+                        options = [
+                            "→ Help me practice explaining my symptoms",
+                            "→ Learn how to describe what I'm feeling",
+                            "→ Practice asking for what I need",
+                            "→ Build confidence in speaking up"
+                        ];
+                    } else if (cleanOption.includes('about me card') || cleanOption.includes('card')) {
+                        message = `Perfect! An 'About Me Card' is a wonderful tool that helps your doctor understand what matters most to you. This ensures your care aligns with your values and life circumstances.`;
+                        options = [
+                            "→ Help me create my About Me Card",
+                            "→ Learn what to include in the card",
+                            "→ Practice presenting it to my doctor",
+                            "→ Customize it for my specific situation"
+                        ];
+                    } else {
+                        message = `I'm here to help you with that! This is an important part of taking care of your health, and I want to make sure you feel prepared and confident.`;
+                        options = [
+                            "→ Tell me more about what you need",
+                            "→ Practice this specific skill",
+                            "→ Learn strategies for success",
+                            "→ Address any concerns you have"
+                        ];
+                    }
+                } else if (cleanOption.includes('brain') || cleanOption.includes('memory') || cleanOption.includes('cognitive')) {
+                    if (cleanOption.includes('basics') || cleanOption.includes('fundamentals')) {
+                        message = `Wonderful! Understanding the basics of brain health gives you a solid foundation for taking care of yourself. Knowledge is power when it comes to your brain health.`;
+                        options = [
+                            "→ Learn about brain nutrition",
+                            "→ Understand brain exercise",
+                            "→ Explore sleep's impact on brain health",
+                            "→ Discover brain-healthy habits"
+                        ];
+                    } else if (cleanOption.includes('memory') || cleanOption.includes('cognitive')) {
+                        message = `Excellent choice! Memory and cognitive function are fascinating aspects of brain health. Your brain has incredible potential for growth and improvement.`;
+                        options = [
+                            "→ Learn how memory works",
+                            "→ Practice cognitive exercises",
+                            "→ Understand factors affecting thinking",
+                            "→ Explore brain-boosting strategies"
+                        ];
+                    } else {
+                        message = `Great! Brain health is such an important topic, and I'm excited to help you learn more about it. What specific aspect would you like to explore?`;
+                        options = [
+                            "→ Learn about brain basics",
+                            "→ Explore memory and thinking",
+                            "→ Discover brain-healthy habits",
+                            "→ Address specific brain concerns"
+                        ];
+                    }
+                } else if (cleanOption.includes('sleep') || cleanOption.includes('rest') || cleanOption.includes('bedtime')) {
+                    message = `Sleep is absolutely fundamental to your brain health and overall well-being. I'm here to help you create better sleep habits and get the rest you need.`;
                     options = [
-                        "→ Learn about brain nutrition",
-                        "→ Understand brain exercise",
-                        "→ Explore sleep's impact on brain health",
-                        "→ Discover brain-healthy habits"
+                        "→ Create a bedtime routine",
+                        "→ Learn relaxation techniques",
+                        "→ Address what's keeping me awake",
+                        "→ Improve my sleep environment"
                     ];
-                } else if (cleanOption.includes('memory') || cleanOption.includes('cognitive')) {
-                    message = `Excellent choice! Memory and cognitive function are fascinating aspects of brain health. Your brain has incredible potential for growth and improvement.`;
+                } else if (cleanOption.includes('stress') || cleanOption.includes('anxiety') || cleanOption.includes('worries')) {
+                    message = `Stress and anxiety can really impact your quality of life, and you don't have to face them alone. I'm here to help you develop effective strategies to manage these challenges.`;
                     options = [
-                        "→ Learn how memory works",
-                        "→ Practice cognitive exercises",
-                        "→ Understand factors affecting thinking",
-                        "→ Explore brain-boosting strategies"
+                        "→ Learn stress management techniques",
+                        "→ Practice anxiety reduction methods",
+                        "→ Identify what's causing my stress",
+                        "→ Develop healthy coping strategies"
+                    ];
+                } else if (cleanOption.includes('relationship') || cleanOption.includes('family') || cleanOption.includes('social')) {
+                    message = `Relationships and social connections are vital for your brain health and emotional well-being. I'm here to help you navigate these important aspects of your life.`;
+                    options = [
+                        "→ Improve communication skills",
+                        "→ Navigate family challenges",
+                        "→ Build new friendships",
+                        "→ Strengthen existing relationships"
+                    ];
+                } else if (cleanOption.includes('goal') || cleanOption.includes('plan') || cleanOption.includes('future')) {
+                    message = `Setting and working toward goals gives your life direction and purpose. I'd love to help you create meaningful goals that align with what matters most to you.`;
+                    options = [
+                        "→ Help me set a specific goal",
+                        "→ Break down my goal into steps",
+                        "→ Create a plan to achieve it",
+                        "→ Track my progress"
+                    ];
+                } else if (cleanOption.includes('reflect') || cleanOption.includes('progress') || cleanOption.includes('journey')) {
+                    message = `Reflection is such a powerful tool for growth. Taking time to look back and document your journey helps you see how far you've come and what's working well.`;
+                    options = [
+                        "→ Review my overall journey",
+                        "→ Document recent progress",
+                        "→ See patterns in my story",
+                        "→ Celebrate my achievements"
                     ];
                 } else {
-                    message = `Great! Brain health is such an important topic, and I'm excited to help you learn more about it. What specific aspect would you like to explore?`;
+                    // Generic but empathetic response for any other option
+                    message = `I'm here to help you with that! This sounds important to you, and I want to make sure you get the support you need. What would be most helpful right now?`;
                     options = [
-                        "→ Learn about brain basics",
-                        "→ Explore memory and thinking",
-                        "→ Discover brain-healthy habits",
-                        "→ Address specific brain concerns"
+                        "→ Tell me more about what you need",
+                        "→ Help me get started",
+                        "→ Address any concerns",
+                        "→ Explore this topic together"
                     ];
                 }
-            } else if (cleanOption.includes('sleep') || cleanOption.includes('rest') || cleanOption.includes('bedtime')) {
-                message = `Sleep is absolutely fundamental to your brain health and overall well-being. I'm here to help you create better sleep habits and get the rest you need.`;
-                options = [
-                    "→ Create a bedtime routine",
-                    "→ Learn relaxation techniques",
-                    "→ Address what's keeping me awake",
-                    "→ Improve my sleep environment"
-                ];
-            } else if (cleanOption.includes('stress') || cleanOption.includes('anxiety') || cleanOption.includes('worries')) {
-                message = `Stress and anxiety can really impact your quality of life, and you don't have to face them alone. I'm here to help you develop effective strategies to manage these challenges.`;
-                options = [
-                    "→ Learn stress management techniques",
-                    "→ Practice anxiety reduction methods",
-                    "→ Identify what's causing my stress",
-                    "→ Develop healthy coping strategies"
-                ];
-            } else if (cleanOption.includes('relationship') || cleanOption.includes('family') || cleanOption.includes('social')) {
-                message = `Relationships and social connections are vital for your brain health and emotional well-being. I'm here to help you navigate these important aspects of your life.`;
-                options = [
-                    "→ Improve communication skills",
-                    "→ Navigate family challenges",
-                    "→ Build new friendships",
-                    "→ Strengthen existing relationships"
-                ];
-            } else if (cleanOption.includes('goal') || cleanOption.includes('plan') || cleanOption.includes('future')) {
-                message = `Setting and working toward goals gives your life direction and purpose. I'd love to help you create meaningful goals that align with what matters most to you.`;
-                options = [
-                    "→ Help me set a specific goal",
-                    "→ Break down my goal into steps",
-                    "→ Create a plan to achieve it",
-                    "→ Track my progress"
-                ];
-            } else if (cleanOption.includes('reflect') || cleanOption.includes('progress') || cleanOption.includes('journey')) {
-                message = `Reflection is such a powerful tool for growth. Taking time to look back and document your journey helps you see how far you've come and what's working well.`;
-                options = [
-                    "→ Review my overall journey",
-                    "→ Document recent progress",
-                    "→ See patterns in my story",
-                    "→ Celebrate my achievements"
-                ];
-            } else {
-                // Generic but empathetic response for any other option
-                message = `I'm here to help you with that! This sounds important to you, and I want to make sure you get the support you need. What would be most helpful right now?`;
-                options = [
-                    "→ Tell me more about what you need",
-                    "→ Help me get started",
-                    "→ Address any concerns",
-                    "→ Explore this topic together"
-                ];
             }
             
             return {
