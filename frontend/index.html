@@ -7529,6 +7529,8 @@ This will help me provide the most relevant and helpful information for your sit
 
             // Handle brain health GOAL-ORIENTED choices
             if (currentPhase === "brain_health_goal_identification") {
+                console.log('🎯 Brain Health Goal Identification Phase - Processing message:', lowerMessage);
+                console.log('🎯 Current phase:', currentPhase);
                 // User has a specific question or concern
                 if (lowerMessage.includes('specific question') || lowerMessage.includes('concern') || lowerMessage.includes('address')) {
                     showBotMessage(
@@ -7557,7 +7559,9 @@ The more specific you can be, the better I can help you.`,
                 }
                 
                 // User wants a personalized learning plan
-                if (lowerMessage.includes('personalized learning plan') || lowerMessage.includes('my goals')) {
+                console.log('🎯 Checking personalized learning plan condition for:', lowerMessage);
+                if (lowerMessage.includes('personalized learning plan') || lowerMessage.includes('my goals') || lowerMessage.includes('create a personalized learning plan')) {
+                    console.log('🎯 MATCHED: Personalized learning plan condition');
                     showBotMessage(
                         `Excellent! A personalized learning plan will be much more effective than generic information.
 
