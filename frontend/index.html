@@ -1891,11 +1891,36 @@
                 }).catch(error => {
                     console.error('❌ PDF.js loading failed:', error);
                     console.log('💡 This explains why PDF uploads are failing');
+                    
+                    // Try alternative approach
+                    console.log('🔄 Attempting alternative PDF.js loading...');
+                    tryAlternativePDFJS();
                 });
                 
             } catch (error) {
                 console.error('❌ PDF.js test failed:', error);
             }
+        }
+
+        // Alternative PDF.js loading approach
+        function tryAlternativePDFJS() {
+            console.log('🔄 Trying alternative PDF.js loading...');
+            
+            // Try loading from different CDN with different version
+            const alternativeScript = document.createElement('script');
+            alternativeScript.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js';
+            alternativeScript.onload = () => {
+                console.log('✅ Alternative PDF.js loaded successfully!');
+                if (typeof pdfjsLib !== 'undefined') {
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.worker.min.js';
+                    console.log('🎯 Alternative PDF.js is now available!');
+                }
+            };
+            alternativeScript.onerror = () => {
+                console.error('❌ Alternative PDF.js also failed');
+                console.log('💡 PDF.js loading is completely blocked - using text-only fallback');
+            };
+            document.head.appendChild(alternativeScript);
         }
 
         // ============= TOKEN-EFFICIENT Q&A CLASS =============
@@ -2155,9 +2180,12 @@
         async function loadPDFJS() {
             return new Promise((resolve, reject) => {
                 if (typeof pdfjsLib !== 'undefined') {
+                    console.log('✅ PDF.js already loaded');
                     resolve();
                     return;
                 }
+                
+                console.log('🔄 Starting PDF.js loading process...');
                 
                 // Try multiple CDN sources for reliability
                 const pdfSources = [
@@ -2167,40 +2195,77 @@
                 ];
                 
                 let currentSourceIndex = 0;
+                let timeoutId = null;
                 
                 function tryNextSource() {
                     if (currentSourceIndex >= pdfSources.length) {
+                        console.error('❌ All PDF.js sources failed to load');
                         reject(new Error('All PDF.js sources failed to load'));
                         return;
                     }
                     
+                    const currentSource = pdfSources[currentSourceIndex];
+                    console.log(`🔄 Attempting to load PDF.js from: ${currentSource}`);
+                    
                     const script = document.createElement('script');
-                    script.src = pdfSources[currentSourceIndex];
+                    script.src = currentSource;
+                    
+                    // Set a timeout for each source
+                    timeoutId = setTimeout(() => {
+                        console.warn(`⏰ Timeout loading from: ${currentSource}`);
+                        script.onerror = null; // Prevent onerror from firing
+                        currentSourceIndex++;
+                        tryNextSource();
+                    }, 10000); // 10 second timeout
+                    
                     script.onload = () => {
-                        console.log('✅ PDF.js loaded from:', pdfSources[currentSourceIndex]);
-                        try {
-                            // Set worker source based on which CDN worked
-                            if (pdfSources[currentSourceIndex].includes('cdnjs')) {
-                                pdfjsLib.GlobalWorkerOptions.workerSrc = 
-                                    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                            } else if (pdfSources[currentSourceIndex].includes('unpkg')) {
-                                pdfjsLib.GlobalWorkerOptions.workerSrc = 
-                                    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-                            } else {
-                                pdfjsLib.GlobalWorkerOptions.workerSrc = 
-                                    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-                            }
-                            resolve();
-                        } catch (error) {
-                            console.error('❌ PDF.js configuration failed:', error);
-                            reject(error);
+                        if (timeoutId) {
+                            clearTimeout(timeoutId);
+                            timeoutId = null;
                         }
+                        
+                        console.log('✅ PDF.js loaded from:', currentSource);
+                        
+                        // Wait a moment for the library to initialize
+                        setTimeout(() => {
+                            try {
+                                if (typeof pdfjsLib === 'undefined') {
+                                    throw new Error('pdfjsLib not defined after script load');
+                                }
+                                
+                                // Set worker source based on which CDN worked
+                                if (currentSource.includes('cdnjs')) {
+                                    pdfjsLib.GlobalWorkerOptions.workerSrc = 
+                                        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                                } else if (currentSource.includes('unpkg')) {
+                                    pdfjsLib.GlobalWorkerOptions.workerSrc = 
+                                        'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+                                } else {
+                                    pdfjsLib.GlobalWorkerOptions.workerSrc = 
+                                        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+                                }
+                                
+                                console.log('✅ PDF.js worker configured successfully');
+                                console.log('📊 PDF.js version:', pdfjsLib.version);
+                                resolve();
+                            } catch (error) {
+                                console.error('❌ PDF.js configuration failed:', error);
+                                reject(error);
+                            }
+                        }, 100);
                     };
+                    
                     script.onerror = () => {
-                        console.warn('⚠️ PDF.js source failed:', pdfSources[currentSourceIndex]);
+                        if (timeoutId) {
+                            clearTimeout(timeoutId);
+                            timeoutId = null;
+                        }
+                        
+                        console.warn('⚠️ PDF.js source failed:', currentSource);
                         currentSourceIndex++;
                         tryNextSource();
                     };
+                    
                     document.head.appendChild(script);
                 }
                 
@@ -2246,8 +2311,34 @@
                     extractedText = await readTextFile(file);
                     extractionMethod = 'text';
                 } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-                    extractedText = await readPDFFile(file);
-                    extractionMethod = 'pdf';
+                    try {
+                        extractedText = await readPDFFile(file);
+                        extractionMethod = 'pdf';
+                    } catch (pdfError) {
+                        console.error('PDF reading failed:', pdfError);
+                        // Offer text conversion fallback
+                        showBotMessage(
+                            `I couldn't read your PDF file. This often happens when:\n` +
+                            `• The PDF contains only scanned images\n` +
+                            `• PDF.js library couldn't load from CDN\n` +
+                            `• Network restrictions are blocking external libraries\n\n` +
+                            `Would you like to:\n` +
+                            `• Try uploading again\n` +
+                            `• Convert your PDF to text and paste it here\n` +
+                            `• Use a different file format\n` +
+                            `• Tell me what the document contains`,
+                            [
+                                "→ Try uploading again",
+                                "→ I'll paste the text instead",
+                                "→ Use different file format",
+                                "→ Tell me about the document"
+                            ]
+                        );
+                        currentPhase = "document_upload_fallback";
+                        documentProcessing = false;
+                        event.target.value = '';
+                        return;
+                    }
                 } else if (file.type.includes('wordprocessingml') || file.name.endsWith('.docx')) {
                     extractedText = await readWordFile(file);
                     extractionMethod = 'docx';
@@ -2400,6 +2491,57 @@
             return false;
         }
 
+        // Document upload fallback handler
+        function handleDocumentUploadFallback(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            if (currentPhase === "document_upload_fallback") {
+                if (lowerMessage.includes('try uploading again')) {
+                    showBotMessage("📄 Please try uploading your PDF again. Sometimes the library just needs another attempt to load properly.");
+                    currentPhase = "main_conversation";
+                    return true;
+                }
+                
+                if (lowerMessage.includes('paste the text')) {
+                    showBotMessage(
+                        "📝 Perfect! Please paste the text content from your document below. I'll process it just like an uploaded file.\n\n" +
+                        "You can copy and paste from:\n" +
+                        "• PDF text content\n" +
+                        "• Word document text\n" +
+                        "• Any other text-based document"
+                    );
+                    currentPhase = "text_paste";
+                    return true;
+                }
+                
+                if (lowerMessage.includes('different file format')) {
+                    showBotMessage(
+                        "📄 Great idea! Try uploading one of these formats instead:\n\n" +
+                        "• **Text files (.txt)** - Most reliable\n" +
+                        "• **Word documents (.docx)** - Good for formatted text\n" +
+                        "• **Rich text (.rtf)** - Preserves some formatting\n\n" +
+                        "You can usually save/export your PDF as one of these formats from most applications."
+                    );
+                    currentPhase = "main_conversation";
+                    return true;
+                }
+                
+                if (lowerMessage.includes('tell me about')) {
+                    showBotMessage(
+                        "📋 That's a smart approach! Tell me what your document contains and I can help you understand it.\n\n" +
+                        "For example:\n" +
+                        "• What type of document is it? (lab results, prescription, etc.)\n" +
+                        "• What information are you looking for?\n" +
+                        "• What questions do you have about it?"
+                    );
+                    currentPhase = "document_description";
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
         // Token-efficient document Q&A handler
         async function handleDocumentQuestion(question) {
             if (!currentDocumentQA) {
@@ -2454,6 +2596,52 @@
             }
             
             return followUps.slice(0, 3); // Limit to 3 suggestions
+        }
+
+        // Text paste handler for when PDF upload fails
+        async function handleTextPaste(message) {
+            if (currentPhase === "text_paste") {
+                if (message.trim().length < 10) {
+                    showBotMessage("That text seems too short to be a document. Please paste the full content or let me know if you need help.");
+                    return true;
+                }
+                
+                showBotMessage("📝 Processing your pasted text...");
+                
+                try {
+                    // Process the pasted text as if it were a document
+                    const processedDoc = await documentProcessor.processDocument(message, "pasted_text.txt");
+                    
+                    // Store document reference
+                    userHistory.uploadedDocuments = userHistory.uploadedDocuments || [];
+                    userHistory.uploadedDocuments.push({
+                        id: processedDoc.id,
+                        filename: "pasted_text.txt",
+                        uploadDate: new Date().toISOString(),
+                        documentType: processedDoc.extracted.documentType,
+                        hasMedialInfo: processedDoc.extracted.medications.length > 0 || processedDoc.extracted.conditions.length > 0
+                    });
+                    
+                    // Store for Q&A
+                    userHistory.currentDocument = processedDoc;
+                    currentDocumentQA = new TokenEfficientQA(processedDoc);
+                    
+                    // Save to localStorage for persistence
+                    localStorage.setItem(`doc_${processedDoc.id}`, JSON.stringify(processedDoc));
+                    saveUserHistory();
+                    
+                    // Handle response based on content
+                    handleProcessedDocument(processedDoc);
+                    
+                } catch (error) {
+                    console.error('Text paste processing error:', error);
+                    showBotMessage("I had trouble processing that text. Could you try pasting it again or break it into smaller sections?");
+                }
+                
+                return true;
+            }
+            
+            return false;
         }
 
         // Sofia's Response Patterns - Styling Guide for Consistent Interactions
@@ -5609,6 +5797,14 @@ Given what we've discussed, how confident are you that you can address these con
             }
             
             if (handleDocumentQA(message)) {
+                return;
+            }
+            
+            if (handleDocumentUploadFallback(message)) {
+                return;
+            }
+            
+            if (handleTextPaste(message)) {
                 return;
             }
             
