@@ -5817,11 +5817,209 @@ Given what we've discussed, how confident are you that you can address these con
             return contextText;
         }
         
-        // UNIVERSAL option handler for ANY option selection with CONTEXT PRESERVATION
+        // Track conversation state and prevent repetition
+        function getConversationState() {
+            if (!window.conversationState) {
+                window.conversationState = {
+                    currentTopic: null,
+                    currentLevel: 0,
+                    discussedOptions: new Set(),
+                    conversationPath: [],
+                    lastResponse: null,
+                    objective: null
+                };
+            }
+            return window.conversationState;
+        }
+        
+        // Update conversation state to track progress
+        function updateConversationState(topic, option, response) {
+            const state = getConversationState();
+            
+            // Track the conversation path
+            state.conversationPath.push({
+                topic: topic,
+                option: option,
+                timestamp: Date.now()
+            });
+            
+            // Mark this option as discussed
+            if (option) {
+                state.discussedOptions.add(option);
+            }
+            
+            // Update current topic and level
+            state.currentTopic = topic;
+            state.currentLevel = state.conversationPath.length;
+            state.lastResponse = response;
+            
+            console.log('🎯 Updated conversation state:', state);
+        }
+        
+        // Check if we've already discussed this option to prevent repetition
+        function hasDiscussedOption(option) {
+            const state = getConversationState();
+            return state.discussedOptions.has(option);
+        }
+        
+        // Get the next level of conversation based on current state
+        function getNextConversationLevel(currentTopic, selectedOption) {
+            const state = getConversationState();
+            const currentLevel = state.currentLevel;
+            
+            console.log('🎯 Getting next conversation level for:', currentTopic, selectedOption, 'at level:', currentLevel);
+            
+            // Define progressive conversation flows
+            const conversationFlows = {
+                'brain_health_learning': {
+                    1: {
+                        'learn about brain health basics': {
+                            message: `Great! Let me share the fundamentals of brain health with you. Your brain is like a supercomputer that needs the right fuel, rest, and stimulation to work at its best.`,
+                            options: [
+                                "→ Learn about brain nutrition and fuel",
+                                "→ Understand brain exercise and stimulation",
+                                "→ Explore how sleep affects brain function",
+                                "→ Discover brain aging and maintenance"
+                            ]
+                        },
+                        'learn about memory and cognitive function': {
+                            message: `Excellent! Memory and cognitive function are fascinating aspects of brain health. Your brain has incredible plasticity - meaning it can change and improve throughout your life.`,
+                            options: [
+                                "→ Learn how memory works and changes",
+                                "→ Explore cognitive exercises and games",
+                                "→ Understand factors that affect thinking",
+                                "→ Discover ways to boost mental sharpness"
+                            ]
+                        },
+                        'explore brain-healthy lifestyle habits': {
+                            message: `Perfect! Lifestyle habits have a huge impact on your brain health. Small daily choices can make a big difference in how your brain functions and how you feel.`,
+                            options: [
+                                "→ Learn about brain-healthy nutrition",
+                                "→ Explore physical activity for brain health",
+                                "→ Understand stress management for cognition",
+                                "→ Discover social connection benefits"
+                            ]
+                        },
+                        'discuss specific brain health concerns': {
+                            message: `I'm here to help you with any specific brain health concerns you have. It's completely normal to have questions or worries, and talking about them can help.`,
+                            options: [
+                                "→ Discuss memory changes you've noticed",
+                                "→ Talk about concentration or focus issues",
+                                "→ Explore mood or emotional changes",
+                                "→ Address other brain health worries"
+                            ]
+                        }
+                    },
+                    2: {
+                        'learn how memory works and changes': {
+                            message: `Memory is fascinating! Your brain doesn't store memories like a computer - it creates connections between neurons. These connections can strengthen or weaken based on how often you use them.`,
+                            options: [
+                                "→ Learn about different types of memory",
+                                "→ Understand how memory changes with age",
+                                "→ Discover ways to strengthen memory",
+                                "→ Learn about memory disorders and prevention"
+                            ]
+                        },
+                        'learn about brain nutrition and fuel': {
+                            message: `Your brain is incredibly energy-hungry! It uses about 20% of your body's energy despite being only 2% of your body weight. The right nutrients can make a huge difference in how it functions.`,
+                            options: [
+                                "→ Learn about brain-boosting foods",
+                                "→ Understand the role of omega-3s and antioxidants",
+                                "→ Discover how hydration affects brain function",
+                                "→ Learn about brain-healthy meal planning"
+                            ]
+                        },
+                        'explore cognitive exercises and games': {
+                            message: `Just like your muscles, your brain needs exercise to stay strong! Cognitive exercises can help build new neural connections and improve your thinking skills.`,
+                            options: [
+                                "→ Learn about different types of brain exercises",
+                                "→ Discover games that boost cognitive function",
+                                "→ Understand how to challenge your brain effectively",
+                                "→ Learn about brain training apps and tools"
+                            ]
+                        }
+                    },
+                    3: {
+                        'learn about different types of memory': {
+                            message: `Memory is much more complex than most people realize! You have several different memory systems working together. Understanding them can help you work with your brain more effectively.`,
+                            options: [
+                                "→ Learn about working memory",
+                                "→ Understand long-term memory",
+                                "→ Discover episodic vs. semantic memory",
+                                "→ Learn how to apply this knowledge"
+                            ]
+                        },
+                        'learn about brain-boosting foods': {
+                            message: `Certain foods are like superfuel for your brain! They contain nutrients that support brain function, protect against damage, and can even help grow new brain cells.`,
+                            options: [
+                                "→ Learn about specific brain foods",
+                                "→ Understand the science behind them",
+                                "→ Discover how to incorporate them into your diet",
+                                "→ Learn about brain-healthy recipes"
+                            ]
+                        }
+                    }
+                }
+            };
+            
+            // Get the flow for the current topic
+            const flow = conversationFlows[currentTopic];
+            if (!flow) return null;
+            
+            // Get the next level options
+            const nextLevel = flow[currentLevel + 1];
+            if (!nextLevel) return null;
+            
+            // Find the specific option response
+            const optionResponse = nextLevel[selectedOption];
+            if (!optionResponse) return null;
+            
+            console.log('🎯 Found next level response:', optionResponse);
+            return optionResponse;
+        }
+        
+        // UNIVERSAL option handler for ANY option selection with PROGRESSIVE CONVERSATION
         function handleAnyOption(optionText, currentContext = null) {
             const cleanOption = optionText.replace(/^→\s+/, '').toLowerCase();
             console.log('🎯 Processing ANY option:', cleanOption);
             console.log('🎯 Current context:', currentContext);
+            
+            // Check if we've already discussed this option to prevent repetition
+            if (hasDiscussedOption(cleanOption)) {
+                console.log('🚫 Option already discussed, preventing repetition');
+                return {
+                    shouldSwitch: false,
+                    reason: 'option_already_discussed'
+                };
+            }
+            
+            // Get current conversation state
+            const state = getConversationState();
+            const currentTopic = state.currentTopic;
+            
+            // Try to get the next level of conversation
+            if (currentTopic && currentTopic !== 'unknown') {
+                const nextLevel = getNextConversationLevel(currentTopic, cleanOption);
+                if (nextLevel) {
+                    console.log('🎯 Using progressive conversation flow');
+                    
+                    // Update conversation state
+                    updateConversationState(currentTopic, cleanOption, nextLevel);
+                    
+                    return {
+                        shouldSwitch: true,
+                        newTopic: `progressive_${currentTopic}_level_${state.currentLevel + 1}`,
+                        newPhase: `progressive_${currentTopic}`,
+                        confidence: 0.98,
+                        reason: 'progressive_conversation',
+                        userInput: cleanOption,
+                        dynamicResponse: nextLevel
+                    };
+                }
+            }
+            
+            // Fallback to context-aware responses for new topics
+            console.log('🎯 Using fallback context-aware responses');
             
             // Generate a unique topic ID based on the option content
             const topicId = 'option_' + cleanOption.replace(/[^a-z0-9]/g, '_').substring(0, 30);
@@ -6023,6 +6221,9 @@ Given what we've discussed, how confident are you that you can address these con
                     ];
                 }
             }
+            
+            // Update conversation state for new topics
+            updateConversationState(topicId, cleanOption, { message, options });
             
             return {
                 shouldSwitch: true,
@@ -7312,6 +7513,14 @@ What would you like to focus on?`
             if (lowerMessage.includes('learn about brain health') || 
                 lowerMessage.includes('brain health education')) {
                 currentPhase = "brain_health_learning";
+                
+                // Initialize conversation state for brain health learning
+                const state = getConversationState();
+                state.currentTopic = 'brain_health_learning';
+                state.currentLevel = 0;
+                state.discussedOptions.clear();
+                state.conversationPath = [];
+                console.log('🎯 Initialized brain health learning conversation state');
                 
                 showBotMessage(
                     `I'm so glad you want to learn more about brain health, ${userHistory.profile.name}! Knowledge truly is power when it comes to taking care of our amazing brains.
@@ -8813,6 +9022,169 @@ How do you feel about your progress so far?`,
                 // Stub function - real implementation in api-client.js
                 return null;
             };
+        }
+        
+        // ============= PROGRESSIVE CONVERSATION SYSTEM =============
+        
+        // Track conversation state and prevent repetition
+        function getConversationState() {
+            if (!window.conversationState) {
+                window.conversationState = {
+                    currentTopic: null,
+                    currentLevel: 0,
+                    discussedOptions: new Set(),
+                    conversationPath: [],
+                    lastResponse: null,
+                    objective: null
+                };
+            }
+            return window.conversationState;
+        }
+        
+        // Update conversation state to track progress
+        function updateConversationState(topic, option, response) {
+            const state = getConversationState();
+            
+            // Track the conversation path
+            state.conversationPath.push({
+                topic: topic,
+                option: option,
+                timestamp: Date.now()
+            });
+            
+            // Mark this option as discussed
+            if (option) {
+                state.discussedOptions.add(option);
+            }
+            
+            // Update current topic and level
+            state.currentTopic = topic;
+            state.currentLevel = state.conversationPath.length;
+            state.lastResponse = response;
+            
+            console.log('🎯 Updated conversation state:', state);
+        }
+        
+        // Check if we've already discussed this option to prevent repetition
+        function hasDiscussedOption(option) {
+            const state = getConversationState();
+            return state.discussedOptions.has(option);
+        }
+        
+        // Get the next level of conversation based on current state
+        function getNextConversationLevel(currentTopic, selectedOption) {
+            const state = getConversationState();
+            const currentLevel = state.currentLevel;
+            
+            console.log('🎯 Getting next conversation level for:', currentTopic, selectedOption, 'at level:', currentLevel);
+            
+            // Define progressive conversation flows
+            const conversationFlows = {
+                'brain_health_learning': {
+                    1: {
+                        'learn about brain health basics': {
+                            message: `Great! Let me share the fundamentals of brain health with you. Your brain is like a supercomputer that needs the right fuel, rest, and stimulation to work at its best.`,
+                            options: [
+                                "→ Learn about brain nutrition and fuel",
+                                "→ Understand brain exercise and stimulation",
+                                "→ Explore how sleep affects brain function",
+                                "→ Discover brain aging and maintenance"
+                            ]
+                        },
+                        'learn about memory and cognitive function': {
+                            message: `Excellent! Memory and cognitive function are fascinating aspects of brain health. Your brain has incredible plasticity - meaning it can change and improve throughout your life.`,
+                            options: [
+                                "→ Learn how memory works and changes",
+                                "→ Explore cognitive exercises and games",
+                                "→ Understand factors affecting thinking",
+                                "→ Discover ways to boost mental sharpness"
+                            ]
+                        },
+                        'explore brain-healthy lifestyle habits': {
+                            message: `Perfect! Lifestyle habits have a huge impact on your brain health. Small daily choices can make a big difference in how your brain functions and how you feel.`,
+                            options: [
+                                "→ Learn about brain-healthy nutrition",
+                                "→ Explore physical activity for brain health",
+                                "→ Understand stress management for cognition",
+                                "→ Discover social connection benefits"
+                            ]
+                        },
+                        'discuss specific brain health concerns': {
+                            message: `I'm here to help you with any specific brain health concerns you have. It's completely normal to have questions or worries, and talking about them can help.`,
+                            options: [
+                                "→ Discuss memory changes you've noticed",
+                                "→ Talk about concentration or focus issues",
+                                "→ Explore mood or emotional changes",
+                                "→ Address other brain health worries"
+                            ]
+                        }
+                    },
+                    2: {
+                        'learn how memory works and changes': {
+                            message: `Memory is fascinating! Your brain doesn't store memories like a computer - it creates connections between neurons. These connections can strengthen or weaken based on how often you use them.`,
+                            options: [
+                                "→ Learn about different types of memory",
+                                "→ Understand how memory changes with age",
+                                "→ Discover ways to strengthen memory",
+                                "→ Learn about memory disorders and prevention"
+                            ]
+                        },
+                        'learn about brain nutrition and fuel': {
+                            message: `Your brain is incredibly energy-hungry! It uses about 20% of your body's energy despite being only 2% of your body weight. The right nutrients can make a huge difference in how it functions.`,
+                            options: [
+                                "→ Learn about brain-boosting foods",
+                                "→ Understand the role of omega-3s and antioxidants",
+                                "→ Discover how hydration affects brain function",
+                                "→ Learn about brain-healthy meal planning"
+                            ]
+                        },
+                        'explore cognitive exercises and games': {
+                            message: `Just like your muscles, your brain needs exercise to stay strong! Cognitive exercises can help build new neural connections and improve your thinking skills.`,
+                            options: [
+                                "→ Learn about different types of brain exercises",
+                                "→ Discover games that boost cognitive function",
+                                "→ Understand how to challenge your brain effectively",
+                                "→ Learn about brain training apps and tools"
+                            ]
+                        }
+                    },
+                    3: {
+                        'learn about different types of memory': {
+                            message: `Memory is much more complex than most people realize! You have several different memory systems working together. Understanding them can help you work with your brain more effectively.`,
+                            options: [
+                                "→ Learn about working memory",
+                                "→ Understand long-term memory",
+                                "→ Discover episodic vs. semantic memory",
+                                "→ Learn how to apply this knowledge"
+                            ]
+                        },
+                        'learn about brain-boosting foods': {
+                            message: `Certain foods are like superfuel for your brain! They contain nutrients that support brain function, protect against damage, and can even help grow new brain cells.`,
+                            options: [
+                                "→ Learn about specific brain foods",
+                                "→ Understand the science behind them",
+                                "→ Discover how to incorporate them into your diet",
+                                "→ Learn about brain-healthy recipes"
+                            ]
+                        }
+                    }
+                }
+            };
+            
+            // Get the flow for the current topic
+            const flow = conversationFlows[currentTopic];
+            if (!flow) return null;
+            
+            // Get the next level options
+            const nextLevel = flow[currentLevel + 1];
+            if (!nextLevel) return null;
+            
+            // Find the specific option response
+            const optionResponse = nextLevel[selectedOption];
+            if (!optionResponse) return null;
+            
+            console.log('🎯 Found next level response:', optionResponse);
+            return optionResponse;
         }
     </script>
     <!-- Configuration - Update this file with your Render app URL -->
