@@ -1576,6 +1576,58 @@
                         responseType: 'storyDevelopment',
                         confidence: 0.90,
                         context: 'brain_health_story_building'
+                    },
+                    
+                    // Specific Goal Selection Patterns - These follow the design pattern with follow-up questions
+                    memoryThinkingSkillsGoal: {
+                        triggers: [
+                            /improve\s+my\s+memory\s+and\s+thinking\s+skills/i,
+                            /memory\s+and\s+thinking\s+skills/i,
+                            /improve\s+memory/i,
+                            /improve\s+thinking/i,
+                            /enhance\s+cognitive/i
+                        ],
+                        responseType: 'memoryThinkingSkills',
+                        confidence: 0.95,
+                        context: 'memory_thinking_skills_planning'
+                    },
+                    
+                    cognitiveDeclinePreventionGoal: {
+                        triggers: [
+                            /prevent\s+cognitive\s+decline/i,
+                            /cognitive\s+decline/i,
+                            /prevent\s+decline/i,
+                            /maintain\s+cognitive/i
+                        ],
+                        responseType: 'cognitiveDeclinePrevention',
+                        confidence: 0.95,
+                        context: 'cognitive_decline_prevention_planning'
+                    },
+                    
+                    supportOthersBrainHealthGoal: {
+                        triggers: [
+                            /support\s+someone\s+else/i,
+                            /support\s+others/i,
+                            /help\s+someone/i,
+                            /caregiver/i,
+                            /family\s+member/i
+                        ],
+                        responseType: 'supportOthersBrainHealth',
+                        confidence: 0.95,
+                        context: 'support_others_brain_health_planning'
+                    },
+                    
+                    medicalDecisionPreparationGoal: {
+                        triggers: [
+                            /medical\s+appointment/i,
+                            /medical\s+decision/i,
+                            /doctor.*appointment/i,
+                            /treatment.*decision/i,
+                            /medication.*decision/i
+                        ],
+                        responseType: 'medicalDecisionPreparation',
+                        confidence: 0.95,
+                        context: 'medical_decision_preparation_planning'
                     }
                 };
             }
@@ -1789,10 +1841,103 @@ Your story can be a powerful tool for motivation and progress tracking.`,
                             "→ Document my current brain health status",
                             "→ Track changes and improvements over time",
                             "→ Create chapters about specific health goals",
-                            "→ Build a narrative about my health journey",
+                            "→ Build a narrative about your health journey",
                             "→ Something else feels meaningful to me"
                         ],
                         phase: "brain_health_story_building"
+                    },
+                    
+                    // Specific goal responses that follow the design pattern
+                    memoryThinkingSkills: {
+                        message: `Excellent! Memory and cognitive function are fascinating aspects of brain health. Your brain has incredible plasticity - meaning it can change and improve throughout your life.
+
+**To help you most effectively, I need to understand what matters most to you about improving your memory and thinking skills.**
+
+For example:
+• Are you experiencing specific memory challenges you want to address?
+• Do you want to enhance your current cognitive abilities?
+• Are you preparing for a particular goal or challenge?
+• Do you have concerns about cognitive changes you've noticed?
+• Something else that's important to you?
+
+Understanding your specific needs will help me provide the most relevant strategies and support for your situation.`,
+                        options: [
+                            "→ I'm experiencing specific memory challenges I want to address",
+                            "→ I want to enhance my current cognitive abilities",
+                            "→ I'm preparing for a particular goal or challenge",
+                            "→ I have concerns about cognitive changes I've noticed",
+                            "→ My situation is different - let me explain"
+                        ],
+                        phase: "memory_thinking_skills_planning"
+                    },
+                    
+                    cognitiveDeclinePrevention: {
+                        message: `That's a proactive and important goal! Preventing cognitive decline is one of the most valuable investments you can make in your long-term health and quality of life.
+
+**To help you create the most effective prevention plan, I need to understand your specific situation and concerns.**
+
+For example:
+• Are you concerned about family history or genetic risk factors?
+• Do you want to maintain your current cognitive abilities as you age?
+• Are you experiencing any early warning signs you want to address?
+• Do you want to build cognitive resilience for future challenges?
+• Something else that's important to you?
+
+Understanding your specific concerns and goals will help me create a prevention strategy that's truly relevant to your life.`,
+                        options: [
+                            "→ I'm concerned about family history or genetic risk factors",
+                            "→ I want to maintain my current cognitive abilities as I age",
+                            "→ I'm experiencing early warning signs I want to address",
+                            "→ I want to build cognitive resilience for future challenges",
+                            "→ My situation is different - let me explain"
+                        ],
+                        phase: "cognitive_decline_prevention_planning"
+                    },
+                    
+                    supportOthersBrainHealth: {
+                        message: `That's such a caring and important goal! Supporting someone else's brain health can make a profound difference in their life and yours.
+
+**To help you provide the most effective support, I need to understand your specific situation and relationship.**
+
+For example:
+• Are you supporting a family member with cognitive changes?
+• Do you want to help someone maintain their brain health?
+• Are you a caregiver looking for strategies and resources?
+• Do you want to support someone through a diagnosis or treatment?
+• Something else that's important to you?
+
+Understanding your specific situation will help me provide the most relevant guidance and resources for your needs.`,
+                        options: [
+                            "→ I'm supporting a family member with cognitive changes",
+                            "→ I want to help someone maintain their brain health",
+                            "→ I'm a caregiver looking for strategies and resources",
+                            "→ I want to support someone through a diagnosis or treatment",
+                            "→ My situation is different - let me explain"
+                        ],
+                        phase: "support_others_brain_health_planning"
+                    },
+                    
+                    medicalDecisionPreparation: {
+                        message: `That's a wise and important goal! Being well-prepared for medical decisions can make a significant difference in your health outcomes and peace of mind.
+
+**To help you prepare most effectively, I need to understand your specific situation and what you're preparing for.**
+
+For example:
+• Are you preparing for a doctor's appointment about cognitive concerns?
+• Do you need to make decisions about treatment options?
+• Are you considering starting or changing medications?
+• Do you want to understand test results or diagnoses?
+• Something else that's important to you?
+
+Understanding your specific needs will help me provide the most relevant information and guidance for your situation.`,
+                        options: [
+                            "→ I'm preparing for a doctor's appointment about cognitive concerns",
+                            "→ I need to make decisions about treatment options",
+                            "→ I'm considering starting or changing medications",
+                            "→ I want to understand test results or diagnoses",
+                            "→ My situation is different - let me explain"
+                        ],
+                        phase: "medical_decision_preparation_planning"
                     }
                 };
             }
@@ -6355,12 +6500,24 @@ Given what we've discussed, how confident are you that you can address these con
                             ]
                         },
                         'learn about memory and cognitive function': {
-                            message: `Excellent! Memory and cognitive function are fascinating aspects of brain health. Your brain has incredible plasticity - meaning it can change and improve throughout your life.`,
+                            message: `Excellent! Memory and cognitive function are fascinating aspects of brain health. Your brain has incredible plasticity - meaning it can change and improve throughout your life.
+
+**To help you most effectively, I need to understand what matters most to you about memory and cognitive function.**
+
+For example:
+• Are you experiencing specific memory challenges you want to address?
+• Do you want to enhance your current cognitive abilities?
+• Are you preparing for a particular goal or challenge?
+• Do you have concerns about cognitive changes you've noticed?
+• Something else that's important to you?
+
+Understanding your specific needs will help me provide the most relevant strategies and support for your situation.`,
                             options: [
-                                "→ Learn how memory works and changes",
-                                "→ Explore cognitive exercises and games",
-                                "→ Understand factors that affect thinking",
-                                "→ Discover ways to boost mental sharpness"
+                                "→ I'm experiencing specific memory challenges I want to address",
+                                "→ I want to enhance my current cognitive abilities",
+                                "→ I'm preparing for a particular goal or challenge",
+                                "→ I have concerns about cognitive changes I've noticed",
+                                "→ My situation is different - let me explain"
                             ]
                         },
                         'explore brain-healthy lifestyle habits': {
@@ -7182,12 +7339,24 @@ Given what we've discussed, how confident are you that you can address these con
                     ]
                 },
                 memory_cognitive_learning: {
-                    message: `Excellent! Memory and cognitive function are fascinating aspects of brain health. Your brain has incredible plasticity - meaning it can change and improve throughout your life.`,
+                    message: `Excellent! Memory and cognitive function are fascinating aspects of brain health. Your brain has incredible plasticity - meaning it can change and improve throughout your life.
+
+**To help you most effectively, I need to understand what matters most to you about memory and cognitive function.**
+
+For example:
+• Are you experiencing specific memory challenges you want to address?
+• Do you want to enhance your current cognitive abilities?
+• Are you preparing for a particular goal or challenge?
+• Do you have concerns about cognitive changes you've noticed?
+• Something else that's important to you?
+
+Understanding your specific needs will help me provide the most relevant strategies and support for your situation.`,
                     options: [
-                        "→ Learn how memory works and changes",
-                        "→ Explore cognitive exercises and games",
-                        "→ Understand factors that affect thinking",
-                        "→ Discover ways to boost mental sharpness"
+                        "→ I'm experiencing specific memory challenges I want to address",
+                        "→ I want to enhance my current cognitive abilities",
+                        "→ I'm preparing for a particular goal or challenge",
+                        "→ I have concerns about cognitive changes I've noticed",
+                        "→ My situation is different - let me explain"
                     ]
                 },
                 brain_lifestyle_habits: {
@@ -9822,12 +9991,24 @@ How do you feel about your progress so far?`,
                             ]
                         },
                         'learn about memory and cognitive function': {
-                            message: `Excellent! Memory and cognitive function are fascinating aspects of brain health. Your brain has incredible plasticity - meaning it can change and improve throughout your life.`,
+                            message: `Excellent! Memory and cognitive function are fascinating aspects of brain health. Your brain has incredible plasticity - meaning it can change and improve throughout your life.
+
+**To help you most effectively, I need to understand what matters most to you about memory and cognitive function.**
+
+For example:
+• Are you experiencing specific memory challenges you want to address?
+• Do you want to enhance your current cognitive abilities?
+• Are you preparing for a particular goal or challenge?
+• Do you have concerns about cognitive changes you've noticed?
+• Something else that's important to you?
+
+Understanding your specific needs will help me provide the most relevant strategies and support for your situation.`,
                             options: [
-                                "→ Learn how memory works and changes",
-                                "→ Explore cognitive exercises and games",
-                                "→ Understand factors affecting thinking",
-                                "→ Discover ways to boost mental sharpness"
+                                "→ I'm experiencing specific memory challenges I want to address",
+                                "→ I want to enhance my current cognitive abilities",
+                                "→ I'm preparing for a particular goal or challenge",
+                                "→ I have concerns about cognitive changes I've noticed",
+                                "→ My situation is different - let me explain"
                             ]
                         },
                         'explore brain-healthy lifestyle habits': {
