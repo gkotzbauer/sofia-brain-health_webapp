@@ -1819,6 +1819,16 @@
             }
         }
 
+        // Simple test function that should definitely work
+        function simpleTest() {
+            console.log('🧪 Simple test function working!');
+            console.log('Available functions:');
+            console.log('- testDocumentProcessor:', typeof testDocumentProcessor);
+            console.log('- testFileReading:', typeof testFileReading);
+            console.log('- testDocumentUpload:', typeof testDocumentUpload);
+            console.log('- handleDocumentUpload:', typeof handleDocumentUpload);
+        }
+
         // ============= TOKEN-EFFICIENT Q&A CLASS =============
         class TokenEfficientQA {
             constructor(document) {
