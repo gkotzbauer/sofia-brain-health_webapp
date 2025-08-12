@@ -1428,6 +1428,61 @@
             }
         }
 
+        // Sofia's Conversation Principles - Foundation for Responsive Interactions
+        const conversationPrinciples = {
+            // 1. ALWAYS respond to what the user actually selected/said
+            respondFirst: (userChoice) => {
+                return `You've chosen to ${userChoice}. Let's explore this together.\n\n`;
+            },
+            
+            // 2. Ask clarifying questions before assuming direction
+            clarifyIntent: () => {
+                return "Help me understand what you'd like to focus on with this. ";
+            },
+            
+            // 3. Offer options but don't force them
+            offerWithoutForcing: (options) => {
+                return "You might want to " + options.join(", or ") + ". Or perhaps something else entirely?";
+            },
+            
+            // 4. Keep existing context as background, not foreground
+            contextAsBackground: (context) => {
+                return `\n\n(For reference: ${context})`;
+            },
+            
+            // 5. End with invitation for their thoughts
+            inviteResponse: () => {
+                const invitations = [
+                    "What are your thoughts?",
+                    "What feels right to you?",
+                    "Tell me what you're thinking.",
+                    "What would you like to explore?",
+                    "Share what's on your mind."
+                ];
+                return invitations[Math.floor(Math.random() * invitations.length)];
+            }
+        };
+
+        // Universal response function that always acknowledges user input
+        function createResponsiveReply(userMessage, context = {}) {
+            let response = "";
+            
+            // ALWAYS acknowledge what they said first
+            if (userMessage.length > 20) {
+                response += `I hear you saying: "${userMessage.substring(0, 100)}..."\n\n`;
+            }
+            
+            // Add context if relevant, but don't force it
+            if (context.existingGoal && !context.hideGoal) {
+                response += `(Just for context, you're working on: "${context.existingGoal}")\n\n`;
+            }
+            
+            // Ask open-ended follow-up
+            response += context.followUp || "Tell me more about what this means for you.";
+            
+            return response;
+        }
+
         // Sofia's Response Patterns - Styling Guide for Consistent Interactions
         const sofiaResponsePatterns = {
             // Core response templates
@@ -4797,61 +4852,57 @@ What would you like to explore first?`,
                 lowerMessage.includes('current quest') ||
                 lowerMessage.includes('continue working to define my goals') || 
                 lowerMessage.includes('goals or life chapters')) {
+                
+                // FIRST: Acknowledge what they selected
+                let response = conversationPrinciples.respondFirst('continue working on defining your goals or life chapters');
+                
+                // SECOND: Check their current context
                 const activeGoals = userHistory.goals.filter(g => g.status === 'active');
+                const hasChapters = userHistory.storyChapters.length > 0;
+                
+                // THIRD: Ask what they want to do
                 if (activeGoals.length > 0) {
-                    let questMessage = `Your current quest: "${activeGoals[0].goal}"`;
-                    
-                    // Add About Me connection
-                    if (activeGoals[0].linkedBestLifeElements && activeGoals[0].linkedBestLifeElements.length > 0) {
-                        questMessage += `\n\nThis quest supports your desire to ${activeGoals[0].linkedBestLifeElements[0].toLowerCase()}.`;
-                    }
-                    
-                    questMessage += `\n\nYou stand at a crossroads in this journey. The path ahead branches in multiple directions.\n\nChoose your next step:`;
-                    
-                    showBotMessage(questMessage, [
-                        "→ Report progress on my quest",
-                        "→ Face a challenge that's emerged",
-                        "→ Seek wisdom for the journey",
-                        "→ Adjust my quest parameters"
-                    ]);
+                    response += `I see you're currently working on: "${activeGoals[0].goal}"\n\n`;
+                    response += `Would you like to:\n`;
+                    response += `• Continue developing this goal\n`;
+                    response += `• Set a new goal alongside this one\n`;
+                    response += `• Transform this learning journey into a life chapter\n`;
+                    response += `• Or something else?\n\n`;
+                    response += `Tell me what feels right for you today.`;
                 } else {
-                    showBotMessage(
-                        `I see you're ready to define meaningful goals for your journey. Let's create something that truly matters to you.
-
-What area of your life would you like to focus on?`,
-                        [
-                            "→ Physical health and movement",
-                            "→ Mental clarity and memory",
-                            "→ Social connections",
-                            "→ Daily independence",
-                            "→ Something specific to me"
-                        ]
-                    );
-                    currentPhase = "goal_definition";
+                    response += `This is a perfect time to define what matters to you.\n\n`;
+                    response += `Are you thinking about:\n`;
+                    response += `• Setting a new goal for your journey\n`;
+                    response += `• Creating a chapter about a meaningful experience\n`;
+                    response += `• Both - capturing where you've been and where you're going\n\n`;
+                    response += `What's calling to you?`;
                 }
+                
+                showBotMessage(response);
+                currentPhase = "goal_chapter_clarification";
                 return;
             }
             
             // Begin working to define my goals or a new chapter (was "Begin a new chapter")
             if (lowerMessage.includes('begin working to define my goals') || 
                 lowerMessage.includes('goals or a new chapter')) {
-                currentPhase = "chapter_or_goal_choice";
                 
-                showBotMessage(
-                    `Every journey needs both direction and story. Would you like to:
-
-- Set a new goal to guide your path forward
-- Create a story chapter to capture a meaningful moment
-- Both - set a goal and tell its story
-
-What calls to you right now?`,
-                    [
-                        "→ Set a new goal",
-                        "→ Create a story chapter",
-                        "→ Both - goal and chapter",
-                        "→ Tell me more about each"
-                    ]
-                );
+                // FIRST: Acknowledge what they selected
+                let response = conversationPrinciples.respondFirst('begin working on defining new goals or life chapters');
+                
+                // SECOND: Ask what they want to focus on
+                response += `Every journey needs both direction and story. I'd love to understand what's calling to you right now.\n\n`;
+                
+                response += `Are you thinking about:\n`;
+                response += `• Setting a new goal to guide your path forward\n`;
+                response += `• Creating a story chapter to capture a meaningful moment\n`;
+                response += `• Both - setting a goal and telling its story\n`;
+                response += `• Or something else entirely?\n\n`;
+                
+                response += conversationPrinciples.inviteResponse();
+                
+                showBotMessage(response);
+                currentPhase = "chapter_or_goal_choice";
                 return;
             }
             
@@ -4859,21 +4910,81 @@ What calls to you right now?`,
             if (lowerMessage.includes('reflect on my journey') || 
                 lowerMessage.includes('document my progress') ||
                 lowerMessage.includes('update my health numbers')) {
-                currentPhase = "reflection_choice";
                 
-                showBotMessage(
-                    `Reflection is a powerful tool for growth. What would you like to focus on?`,
-                    [
-                        "→ Review my overall journey",
-                        "→ Document recent progress",
-                        "→ Update my health numbers",
-                        "→ See patterns in my story",
-                        "→ Celebrate achievements"
-                    ]
-                );
+                // FIRST: Acknowledge what they selected
+                let response = conversationPrinciples.respondFirst('reflect on your journey and document your progress');
+                
+                // SECOND: Ask what aspect of reflection interests them
+                response += `Reflection is a powerful tool for growth. I'd love to understand what aspect of your journey you'd like to explore.\n\n`;
+                
+                response += `Are you thinking about:\n`;
+                response += `• Reviewing your overall journey and progress\n`;
+                response += `• Documenting recent experiences or breakthroughs\n`;
+                response += `• Updating your health numbers or measurements\n`;
+                response += `• Seeing patterns in your story over time\n`;
+                response += `• Celebrating specific achievements\n`;
+                response += `• Or something else that feels important?\n\n`;
+                
+                response += conversationPrinciples.inviteResponse();
+                
+                showBotMessage(response);
+                currentPhase = "reflection_choice";
                 return;
             }
             
+            // Handle their clarification about goals/chapters
+            if (currentPhase === "goal_chapter_clarification") {
+                // Listen to what they actually said
+                if (lowerMessage.includes('continue developing') || lowerMessage.includes('this goal')) {
+                    // They want to work on existing goal
+                    const activeGoal = userHistory.goals.find(g => g.status === 'active');
+                    
+                    showBotMessage(
+                        `Let's explore your goal: "${activeGoal.goal}"\n\n` +
+                        `Tell me - what's been happening with this? Have you:\n` +
+                        `• Made some progress you'd like to share?\n` +
+                        `• Encountered challenges?\n` +
+                        `• Discovered something new about what you want?\n` +
+                        `• Or is there another aspect you'd like to discuss?\n\n` +
+                        `I'm here to listen and help however you need.`
+                    );
+                    currentPhase = "goal_exploration_open";
+                    
+                } else if (lowerMessage.includes('new goal')) {
+                    showBotMessage(
+                        `Setting a new goal - wonderful! Goals give our journey direction and meaning.\n\n` +
+                        `What area of your life is calling for attention right now? It could be:\n` +
+                        `• Something specific you want to achieve\n` +
+                        `• A habit you want to build\n` +
+                        `• A fear you want to address\n` +
+                        `• Or any change you want to make\n\n` +
+                        `Share what's on your mind, and we'll shape it together.`
+                    );
+                    currentPhase = "new_goal_exploration";
+                    
+                } else if (lowerMessage.includes('chapter') || lowerMessage.includes('meaningful experience')) {
+                    showBotMessage(
+                        `Creating a life chapter - what a beautiful way to honor your experiences.\n\n` +
+                        `Chapters can capture:\n` +
+                        `• A recent breakthrough or realization\n` +
+                        `• A challenge you've overcome\n` +
+                        `• A moment that changed your perspective\n` +
+                        `• Or any experience that feels significant\n\n` +
+                        `What story is asking to be told?`
+                    );
+                    currentPhase = "chapter_exploration_open";
+                    
+                } else {
+                    // They said something unexpected - RESPOND TO IT
+                    showBotMessage(
+                        `I want to make sure I understand what you'd like to focus on. You mentioned: "${message}"\n\n` +
+                        `Tell me more about what this means to you. I'm here to support whatever direction feels right for your journey.`
+                    );
+                    currentPhase = "open_exploration";
+                }
+                return;
+            }
+
             // Name collection phase
             if (!userHistory.profile.name && currentPhase === "introduction") {
                 userHistory.profile.name = message;
@@ -5561,6 +5672,84 @@ What would you like to focus on?`
                     "→ The Valley of Calm (Stress management)",
                     "→ Other - enter what you'd like to do in the message box below"
                 ]);
+                return;
+            }
+
+            // Handle reflection choice clarification
+            if (currentPhase === "reflection_choice") {
+                if (lowerMessage.includes('overall journey') || lowerMessage.includes('overall progress')) {
+                    showBotMessage(
+                        `Reviewing your overall journey - what a wonderful way to see how far you've come!\n\n` +
+                        `I'd love to help you reflect on your progress. What aspect of your journey would you like to explore?\n\n` +
+                        `• How your goals have evolved over time\n` +
+                        `• The patterns in your story chapters\n` +
+                        `• Changes in your health and wellbeing\n` +
+                        `• Growth in what matters most to you\n` +
+                        `• Or something else that feels important?\n\n` +
+                        `Tell me what you'd like to focus on.`
+                    );
+                    currentPhase = "journey_review_exploration";
+                    
+                } else if (lowerMessage.includes('recent progress') || lowerMessage.includes('document progress')) {
+                    showBotMessage(
+                        `Documenting recent progress - this is such a powerful practice!\n\n` +
+                        `What recent experiences or breakthroughs would you like to capture?\n\n` +
+                        `• A goal you've made progress on\n` +
+                        `• A challenge you've overcome\n` +
+                        `• A new habit you've developed\n` +
+                        `• A realization or insight you've had\n` +
+                        `• Or something else that feels significant?\n\n` +
+                        `Share what's been happening, and we'll document it together.`
+                    );
+                    currentPhase = "progress_documentation";
+                    
+                } else if (lowerMessage.includes('health numbers') || lowerMessage.includes('measurements')) {
+                    showBotMessage(
+                        `Updating your health numbers - this helps us track your progress!\n\n` +
+                        `What health measurements would you like to update or discuss?\n\n` +
+                        `• Physical measurements (weight, blood pressure, etc.)\n` +
+                        `• Activity levels or exercise progress\n` +
+                        `• Sleep quality or duration\n` +
+                        `• Mood or energy levels\n` +
+                        `• Or other health indicators you're tracking?\n\n` +
+                        `Tell me what you'd like to update, and we'll record it together.`
+                    );
+                    currentPhase = "health_numbers_update";
+                    
+                } else if (lowerMessage.includes('patterns') || lowerMessage.includes('story over time')) {
+                    showBotMessage(
+                        `Seeing patterns in your story over time - this is where real insights emerge!\n\n` +
+                        `What kind of patterns are you curious about?\n\n` +
+                        `• How your goals and priorities have changed\n` +
+                        `• Cycles in your energy or motivation\n` +
+                        `• Recurring themes in your story chapters\n` +
+                        `• Progress in specific areas over time\n` +
+                        `• Or something else that feels revealing?\n\n` +
+                        `Share what patterns you'd like to explore, and we'll discover them together.`
+                    );
+                    currentPhase = "pattern_exploration";
+                    
+                } else if (lowerMessage.includes('celebrate') || lowerMessage.includes('achievements')) {
+                    showBotMessage(
+                        `Celebrating achievements - this is so important for motivation!\n\n` +
+                        `What would you like to celebrate today?\n\n` +
+                        `• A goal you've reached\n` +
+                        `• A habit you've maintained\n` +
+                        `• A challenge you've overcome\n` +
+                        `• Progress you've made\n` +
+                        `• Or something else that feels like an achievement?\n\n` +
+                        `Tell me what you'd like to celebrate, and let's honor your success together!`
+                    );
+                    currentPhase = "celebration_exploration";
+                    
+                } else {
+                    // They said something unexpected - RESPOND TO IT
+                    showBotMessage(
+                        `I want to make sure I understand what aspect of reflection interests you. You mentioned: "${message}"\n\n` +
+                        `Tell me more about what this means to you. I'm here to support whatever direction feels right for your reflection.`
+                    );
+                    currentPhase = "open_reflection_exploration";
+                }
                 return;
             }
 
