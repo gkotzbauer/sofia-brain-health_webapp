@@ -5788,6 +5788,20 @@ Given what we've discussed, how confident are you that you can address these con
                     confidence: 0.95,
                     reason: 'work_life_balance_issue'
                 },
+                // Document upload requests
+                {
+                    pattern: /(?:want\s+to\s+)?(?:upload|share|show)\s+(?:a\s+)?(?:document|paper|report)\s+(?:my\s+)?(?:clinician|doctor|provider|therapist)\s+(?:gave\s+)?(?:to\s+)?(?:me)/i,
+                    topic: 'document_upload_request',
+                    confidence: 0.95,
+                    reason: 'document_upload_need'
+                },
+                // Learn about brain health
+                {
+                    pattern: /(?:learn|find\s+out|understand|know\s+more)\s+(?:about\s+)?(?:brain\s+)?(?:health|wellness|function)/i,
+                    topic: 'brain_health_learning',
+                    confidence: 0.95,
+                    reason: 'educational_interest'
+                },
                 // General anxiety about health
                 {
                     pattern: /(?:feeling|am|i'm)\s+(?:anxious|worried|concerned|stressed)\s+(?:about\s+)?(?:my\s+)?(?:health|medical|condition)/i,
@@ -5826,8 +5840,11 @@ Given what we've discussed, how confident are you that you can address these con
             ];
             
             // Check for specific situation patterns first
+            console.log('🔍 Checking specific situation patterns...');
             for (const situation of situationPatterns) {
+                console.log('🔍 Testing pattern:', situation.pattern, 'against input:', userInput);
                 if (situation.pattern.test(userInput)) {
+                    console.log('✅ Pattern matched! Topic:', situation.topic, 'Confidence:', situation.confidence);
                     return {
                         shouldSwitch: true,
                         newTopic: situation.topic,
@@ -5838,6 +5855,7 @@ Given what we've discussed, how confident are you that you can address these con
                     };
                 }
             }
+            console.log('❌ No specific situation patterns matched');
             
             // Fallback to general topic detection for less specific cases
             const generalTopicIndicators = {
@@ -6020,6 +6038,24 @@ Given what we've discussed, how confident are you that you can address these con
                         "→ Discuss when to seek professional help",
                         "→ Explore self-care strategies"
                     ]
+                },
+                document_upload_request: {
+                    message: `Let's do it! Feel free to upload a document using the button in the bottom right hand corner of the page. I'll study the document and let you know when I am ready for your questions.`,
+                    options: [
+                        "→ I've uploaded the document",
+                        "→ I need help with the upload process",
+                        "→ Tell me more about how this works",
+                        "→ I changed my mind - let's discuss something else"
+                    ]
+                },
+                brain_health_learning: {
+                    message: `Wonderful! Learning about brain health is such an important part of taking care of yourself. I'd love to share some insights and help you understand how your brain works.`,
+                    options: [
+                        "→ Tell me about brain health basics",
+                        "→ Learn about memory and cognitive function",
+                        "→ Explore brain-healthy lifestyle habits",
+                        "→ Discuss specific brain health concerns"
+                    ]
                 }
             };
             
@@ -6158,10 +6194,18 @@ Given what we've discussed, how confident are you that you can address these con
             }
 
             // CORE INTENT RECOGNITION - Detect when users want to discuss new topics
+            console.log('🔍 Intent recognition check for message:', message);
             const intentRecognition = detectUserIntent(message, currentPhase);
+            console.log('🎯 Intent recognition result:', intentRecognition);
+            
             if (intentRecognition.shouldSwitch) {
                 console.log('🎯 Intent recognition: User wants to discuss new topic:', intentRecognition.newTopic);
+                console.log('🎯 Confidence level:', intentRecognition.confidence);
+                console.log('🎯 Reason:', intentRecognition.reason);
+                
                 const naturalResponse = generateNaturalTopicSwitch(intentRecognition);
+                console.log('💬 Generated response:', naturalResponse);
+                
                 if (naturalResponse) {
                     showBotMessage(naturalResponse.message, naturalResponse.options);
                     currentPhase = intentRecognition.newPhase || "natural_conversation";
