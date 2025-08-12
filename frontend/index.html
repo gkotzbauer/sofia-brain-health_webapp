@@ -1724,12 +1724,190 @@
                 
                 processor.processDocument(sampleText, "test.txt").then(result => {
                     console.log('✅ Document processed successfully:', result);
+                    
+                    // Test Q&A system with the processed document
+                    console.log('🧪 Testing Q&A system...');
+                    const qa = new TokenEfficientQA(result);
+                    console.log('✅ Q&A system initialized');
+                    
+                    // Test a question
+                    qa.answerQuestion("What medications are mentioned?").then(answer => {
+                        console.log('✅ Q&A test successful:', answer);
+                    }).catch(error => {
+                        console.error('❌ Q&A test failed:', error);
+                    });
+                    
                 }).catch(error => {
                     console.error('❌ Processing failed:', error);
                 });
                 
             } catch (error) {
                 console.error('❌ Test failed:', error);
+            }
+        }
+
+        // ============= TOKEN-EFFICIENT Q&A CLASS =============
+        class TokenEfficientQA {
+            constructor(document) {
+                this.document = document;
+                this.maxContextTokens = 500;
+            }
+            
+            async answerQuestion(question) {
+                // 1. Try to answer without LLM first
+                const localAnswer = this.tryLocalAnswer(question);
+                if (localAnswer.confidence > 0.8) {
+                    return localAnswer.answer;
+                }
+                
+                // 2. Find relevant chunks only
+                const relevantChunks = this.findRelevantChunks(question);
+                
+                // 3. If no relevant chunks, check if question needs clarification
+                if (relevantChunks.length === 0) {
+                    return this.handleNoRelevantContent(question);
+                }
+                
+                // 4. For now, return structured answer from chunks (no LLM)
+                return this.createStructuredAnswer(relevantChunks, question);
+            }
+            
+            tryLocalAnswer(question) {
+                const q = question.toLowerCase();
+                
+                // Medication questions
+                if (q.includes('medication') || q.includes('medicine') || q.includes('prescription')) {
+                    if (this.document.extracted.medications.length > 0) {
+                        return {
+                            answer: `Based on your document, these medications are mentioned:\n\n${
+                                this.document.extracted.medications.map(m => `• ${m}`).join('\n')
+                            }\n\nIs there something specific about these medications you'd like to know?`,
+                            confidence: 0.9
+                        };
+                    } else {
+                        return {
+                            answer: "I don't see any specific medications mentioned in this document.",
+                            confidence: 0.9
+                        };
+                    }
+                }
+                
+                // Date questions
+                if (q.includes('when') || q.includes('date') || q.includes('appointment')) {
+                    if (this.document.extracted.dates.length > 0) {
+                        return {
+                            answer: `The document contains these dates:\n\n${
+                                this.document.extracted.dates.map(d => `• ${d}`).join('\n')
+                            }\n\nDo any of these relate to what you're looking for?`,
+                            confidence: 0.9
+                        };
+                    }
+                }
+                
+                // Condition questions
+                if (q.includes('condition') || q.includes('diagnosis') || q.includes('problem')) {
+                    if (this.document.extracted.conditions.length > 0) {
+                        return {
+                            answer: `The document mentions these conditions:\n\n${
+                                this.document.extracted.conditions.map(c => `• ${c}`).join('\n')
+                            }\n\nWould you like to know more about any of these?`,
+                            confidence: 0.85
+                        };
+                    }
+                }
+                
+                // Document type questions
+                if (q.includes('what kind') || q.includes('type of document') || q.includes('what is this')) {
+                    return {
+                        answer: `This appears to be a ${this.document.extracted.documentType.replace('_', ' ')} document.`,
+                        confidence: 0.85
+                    };
+                }
+                
+                return { answer: null, confidence: 0 };
+            }
+            
+            findRelevantChunks(question) {
+                const keywords = this.extractQueryKeywords(question);
+                const scored = [];
+                
+                this.document.chunks.forEach(chunk => {
+                    let score = 0;
+                    
+                    // Keyword matching
+                    keywords.forEach(keyword => {
+                        if (chunk.content.toLowerCase().includes(keyword)) {
+                            score += 2;
+                        }
+                        if (chunk.keywords.includes(keyword)) {
+                            score += 1;
+                        }
+                    });
+                    
+                    // Type matching
+                    if (this.questionMatchesType(question, chunk.type)) {
+                        score += 3;
+                    }
+                    
+                    if (score > 0) {
+                        scored.push({ chunk, score });
+                    }
+                });
+                
+                // Return top 3 chunks
+                return scored
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 3)
+                    .map(s => s.chunk);
+            }
+            
+            extractQueryKeywords(question) {
+                const stopWords = ['what', 'when', 'where', 'how', 'is', 'are', 'the', 'a', 'an'];
+                return question.toLowerCase()
+                    .split(/\W+/)
+                    .filter(w => w.length > 2 && !stopWords.includes(w));
+            }
+            
+            questionMatchesType(question, chunkType) {
+                const q = question.toLowerCase();
+                const typeMatches = {
+                    medications: ['medication', 'medicine', 'drug', 'prescription'],
+                    diagnosis: ['diagnosis', 'condition', 'problem'],
+                    labs: ['lab', 'test', 'result', 'value'],
+                    instructions: ['instruction', 'follow', 'next', 'appointment']
+                };
+                
+                return typeMatches[chunkType]?.some(word => q.includes(word)) || false;
+            }
+            
+            createStructuredAnswer(chunks, question) {
+                let answer = "Based on your document:\n\n";
+                
+                chunks.forEach((chunk, index) => {
+                    // Extract most relevant sentences
+                    const sentences = chunk.content.split(/[.!?]+/);
+                    const relevantSentences = sentences.filter(s => {
+                        const sLower = s.toLowerCase();
+                        return this.extractQueryKeywords(question).some(k => sLower.includes(k));
+                    }).slice(0, 2);
+                    
+                    if (relevantSentences.length > 0) {
+                        answer += `${relevantSentences.join('. ').trim()}.\n\n`;
+                    }
+                });
+                
+                answer += "Is there something specific you'd like me to clarify?";
+                return answer;
+            }
+            
+            handleNoRelevantContent(question) {
+                return `I couldn't find specific information about "${question}" in the document. ` +
+                       `\n\nThe document contains information about:\n` +
+                       `• ${this.document.extracted.documentType.replace('_', ' ')}\n` +
+                       (this.document.extracted.medications.length > 0 ? `• Medications\n` : '') +
+                       (this.document.extracted.conditions.length > 0 ? `• Medical conditions\n` : '') +
+                       (this.document.extracted.dates.length > 0 ? `• Important dates\n` : '') +
+                       `\nWhat would you like to know about?`;
             }
         }
 
