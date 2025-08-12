@@ -5746,6 +5746,28 @@ Given what we've discussed, how confident are you that you can address these con
                 };
             }
             
+            // First, check if this is a brain health option selection
+            if (message.startsWith('→') && (lowerMessage.includes('brain') || lowerMessage.includes('memory') || lowerMessage.includes('cognitive') || lowerMessage.includes('lifestyle') || lowerMessage.includes('concerns'))) {
+                console.log('🧠 Detected brain health option selection:', message);
+                const brainHealthOption = handleBrainHealthOption(message);
+                if (brainHealthOption) {
+                    // Preserve current conversation context
+                    window.conversationMemory.previousTopic = currentPhase;
+                    window.conversationMemory.previousPhase = currentPhase;
+                    window.conversationMemory.previousOptions = getCurrentOptions();
+                    window.conversationMemory.userProgress = getUserProgress();
+                    
+                    return {
+                        shouldSwitch: true,
+                        newTopic: brainHealthOption.newTopic,
+                        newPhase: brainHealthOption.newPhase,
+                        confidence: brainHealthOption.confidence,
+                        reason: brainHealthOption.reason,
+                        userInput: brainHealthOption.userInput
+                    };
+                }
+            }
+            
             // Check for topic divergence from current conversation
             const topicDivergence = detectTopicDivergence(lowerMessage, currentPhase);
             
@@ -5761,11 +5783,64 @@ Given what we've discussed, how confident are you that you can address these con
                     newTopic: topicDivergence.newTopic,
                     newPhase: topicDivergence.newPhase,
                     confidence: topicDivergence.confidence,
-                    reason: topicDivergence.reason
+                    reason: topicDivergence.reason,
+                    userInput: topicDivergence.userInput
                 };
             }
             
             return { shouldSwitch: false };
+        }
+        
+        // Intelligent option selection handler for brain health topics
+        function handleBrainHealthOption(optionText) {
+            const cleanOption = optionText.replace(/^→\s+/, '').toLowerCase();
+            console.log('🧠 Processing brain health option:', cleanOption);
+            
+            if (cleanOption.includes('brain health basics') || cleanOption.includes('basics') || cleanOption.includes('fundamentals')) {
+                return {
+                    shouldSwitch: true,
+                    newTopic: 'brain_health_basics',
+                    newPhase: 'natural_brain_health_basics',
+                    confidence: 0.98,
+                    reason: 'user_selected_brain_health_basics',
+                    userInput: cleanOption
+                };
+            }
+            
+            if (cleanOption.includes('memory') || cleanOption.includes('cognitive') || cleanOption.includes('brain function')) {
+                return {
+                    shouldSwitch: true,
+                    newTopic: 'memory_cognitive_learning',
+                    newPhase: 'natural_memory_cognitive_learning',
+                    confidence: 0.98,
+                    reason: 'user_selected_memory_topic',
+                    userInput: cleanOption
+                };
+            }
+            
+            if (cleanOption.includes('lifestyle') || cleanOption.includes('habits') || cleanOption.includes('practices')) {
+                return {
+                    shouldSwitch: true,
+                    newTopic: 'brain_lifestyle_habits',
+                    newPhase: 'natural_brain_lifestyle_habits',
+                    confidence: 0.98,
+                    reason: 'user_selected_lifestyle_topic',
+                    userInput: cleanOption
+                };
+            }
+            
+            if (cleanOption.includes('concerns') || cleanOption.includes('worries') || cleanOption.includes('issues')) {
+                return {
+                    shouldSwitch: true,
+                    newTopic: 'brain_health_concerns',
+                    newPhase: 'natural_brain_health_concerns',
+                    confidence: 0.98,
+                    reason: 'user_selected_concerns_topic',
+                    userInput: cleanOption
+                };
+            }
+            
+            return null;
         }
         
         // Detect when user input diverges from offered options
@@ -5801,6 +5876,42 @@ Given what we've discussed, how confident are you that you can address these con
                     topic: 'brain_health_learning',
                     confidence: 0.95,
                     reason: 'educational_interest'
+                },
+                // Brain health basics (from answer options)
+                {
+                    pattern: /(?:tell\s+me\s+about\s+)?(?:brain\s+)?(?:health\s+)?(?:basics|fundamentals|essentials)/i,
+                    topic: 'brain_health_basics',
+                    confidence: 0.95,
+                    reason: 'educational_interest'
+                },
+                // Memory and cognitive function
+                {
+                    pattern: /(?:learn\s+about\s+)?(?:memory|cognitive|brain\s+function|thinking|mental\s+processes)/i,
+                    topic: 'memory_cognitive_learning',
+                    confidence: 0.95,
+                    reason: 'educational_interest'
+                },
+                // Brain-healthy lifestyle habits
+                {
+                    pattern: /(?:explore\s+)?(?:brain\s+)?(?:healthy\s+)?(?:lifestyle|habits|practices|behaviors)/i,
+                    topic: 'brain_lifestyle_habits',
+                    confidence: 0.95,
+                    reason: 'educational_interest'
+                },
+                // Specific brain health concerns
+                {
+                    pattern: /(?:discuss\s+)?(?:specific\s+)?(?:brain\s+)?(?:health\s+)?(?:concerns|worries|issues|problems)/i,
+                    topic: 'brain_health_concerns',
+                    confidence: 0.95,
+                    reason: 'health_concern'
+                },
+                // Option selection patterns (when users click on provided options)
+                {
+                    pattern: /^→\s+(.+)$/i,
+                    topic: 'option_selection',
+                    confidence: 0.98,
+                    reason: 'user_selected_option',
+                    extractContent: true // Flag to extract the actual content
                 },
                 // General anxiety about health
                 {
@@ -5845,13 +5956,24 @@ Given what we've discussed, how confident are you that you can address these con
                 console.log('🔍 Testing pattern:', situation.pattern, 'against input:', userInput);
                 if (situation.pattern.test(userInput)) {
                     console.log('✅ Pattern matched! Topic:', situation.topic, 'Confidence:', situation.confidence);
+                    
+                    // If this is an option selection, extract the actual content
+                    let processedInput = userInput;
+                    if (situation.extractContent && situation.pattern.test(userInput)) {
+                        const match = userInput.match(situation.pattern);
+                        if (match && match[1]) {
+                            processedInput = match[1].trim();
+                            console.log('🔍 Extracted content from option:', processedInput);
+                        }
+                    }
+                    
                     return {
                         shouldSwitch: true,
                         newTopic: situation.topic,
                         newPhase: `natural_${situation.topic}`,
                         confidence: situation.confidence,
                         reason: situation.reason,
-                        userInput: userInput // Pass the original input for context
+                        userInput: processedInput // Pass the processed input for context
                     };
                 }
             }
@@ -6055,6 +6177,50 @@ Given what we've discussed, how confident are you that you can address these con
                         "→ Learn about memory and cognitive function",
                         "→ Explore brain-healthy lifestyle habits",
                         "→ Discuss specific brain health concerns"
+                    ]
+                },
+                brain_health_basics: {
+                    message: `Great choice! Let me share the fundamentals of brain health with you. Your brain is like a supercomputer that needs the right fuel, rest, and stimulation to work at its best.`,
+                    options: [
+                        "→ Tell me about brain nutrition and fuel",
+                        "→ Learn about brain exercise and stimulation",
+                        "→ Explore how sleep affects brain function",
+                        "→ Understand brain aging and maintenance"
+                    ]
+                },
+                memory_cognitive_learning: {
+                    message: `Excellent! Memory and cognitive function are fascinating aspects of brain health. Your brain has incredible plasticity - meaning it can change and improve throughout your life.`,
+                    options: [
+                        "→ Learn how memory works and changes",
+                        "→ Explore cognitive exercises and games",
+                        "→ Understand factors that affect thinking",
+                        "→ Discover ways to boost mental sharpness"
+                    ]
+                },
+                brain_lifestyle_habits: {
+                    message: `Perfect! Lifestyle habits have a huge impact on your brain health. Small daily choices can make a big difference in how your brain functions and how you feel.`,
+                    options: [
+                        "→ Learn about brain-healthy nutrition",
+                        "→ Explore physical activity for brain health",
+                        "→ Understand stress management for cognition",
+                        "→ Discover social connection benefits"
+                    ]
+                },
+                brain_health_concerns: {
+                    message: `I'm here to help you with any specific brain health concerns you have. It's completely normal to have questions or worries, and talking about them can help.`,
+                    options: [
+                        "→ Discuss memory changes you've noticed",
+                        "→ Talk about concentration or focus issues",
+                        "→ Explore mood or emotional changes",
+                        "→ Address other brain health worries"
+                    ]
+                },
+                option_selection: {
+                    message: `I see you've selected an option. Let me help you with that specific topic.`,
+                    options: [
+                        "→ Continue with this topic",
+                        "→ Choose a different option",
+                        "→ Ask me something else"
                     ]
                 }
             };
