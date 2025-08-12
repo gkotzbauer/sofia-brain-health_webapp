@@ -1829,6 +1829,47 @@
             console.log('- handleDocumentUpload:', typeof handleDocumentUpload);
         }
 
+        // Test function for complete document Q&A system
+        function testDocumentQA() {
+            try {
+                console.log('🧪 Testing complete document Q&A system...');
+                
+                // Test if Q&A handlers are available
+                console.log('📄 handleDocumentReviewResponses available:', typeof handleDocumentReviewResponses === 'function');
+                console.log('📄 handleDocumentQA available:', typeof handleDocumentQA === 'function');
+                console.log('📄 handleDocumentQuestion available:', typeof handleDocumentQuestion === 'function');
+                console.log('📄 generateSmartFollowUps available:', typeof generateSmartFollowUps === 'function');
+                
+                // Test with sample document
+                const sampleText = "Patient diagnosed with diabetes and hypertension. Prescribed Metformin 500mg twice daily and Lisinopril 10mg daily.";
+                console.log('📝 Sample medical text:', sampleText);
+                
+                documentProcessor.processDocument(sampleText, "test_qa.txt").then(result => {
+                    console.log('✅ Sample document processed for Q&A test:', result);
+                    
+                    // Test Q&A system
+                    currentDocumentQA = new TokenEfficientQA(result);
+                    userHistory.currentDocument = result;
+                    
+                    console.log('✅ Q&A system initialized with document');
+                    
+                    // Test a question
+                    currentDocumentQA.answerQuestion("What medications are mentioned?").then(answer => {
+                        console.log('✅ Q&A test successful:', answer);
+                        console.log('🎯 Document Q&A system is fully functional!');
+                    }).catch(error => {
+                        console.error('❌ Q&A test failed:', error);
+                    });
+                    
+                }).catch(error => {
+                    console.error('❌ Sample processing failed:', error);
+                });
+                
+            } catch (error) {
+                console.error('❌ Document Q&A test failed:', error);
+            }
+        }
+
         // ============= TOKEN-EFFICIENT Q&A CLASS =============
         class TokenEfficientQA {
             constructor(document) {
@@ -2189,7 +2230,7 @@
                 message += `• ${processedDoc.extracted.medications.length} medication${processedDoc.extracted.medications.length > 1 ? 's' : ''}\n`;
             }
             if (processedDoc.extracted.conditions.length > 0) {
-                message += `• ${processedDoc.extracted.conditions.length} medical condition${processedDoc.extracted.conditions.length > 1 ? 's' : ''}\n`;
+                message += `• ${processedDoc.extracted.conditions.length} medical condition${processedDoc.extracted.medications.length > 1 ? 's' : ''}\n`;
             }
             if (processedDoc.extracted.dates.length > 0) {
                 message += `• ${processedDoc.extracted.dates.length} important date${processedDoc.extracted.dates.length > 1 ? 's' : ''}\n`;
@@ -2212,6 +2253,122 @@
                 showBotMessage(message);
                 currentPhase = "document_qa";
             }
+        }
+
+        // ============= Q&A CONVERSATION HANDLERS =============
+        
+        // Add these handlers to the processUserMessage function
+        // Document review responses
+        function handleDocumentReviewResponses(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            if (currentPhase === "document_review") {
+                if (lowerMessage.includes('yes') && lowerMessage.includes('my medical')) {
+                    const doc = userHistory.currentDocument;
+                    
+                    showBotMessage(
+                        `Thank you for trusting me with your medical information. ` +
+                        `I'll keep this information private and use it to better support you.\n\n` +
+                        `Would you like me to:`,
+                        [
+                            "→ Add medications to your profile",
+                            "→ Note health conditions mentioned",
+                            "→ Save important dates",
+                            "→ Just answer questions about it",
+                            "→ All of the above"
+                        ]
+                    );
+                    
+                    currentPhase = "document_profile_integration";
+                    return true;
+                }
+                
+                if (lowerMessage.includes('no') || lowerMessage.includes('someone else')) {
+                    showBotMessage(
+                        `I understand. I'll help you understand this document without adding anything to your personal profile.\n\n` +
+                        `What would you like to know about the document?`
+                    );
+                    currentPhase = "document_qa";
+                    return true;
+                }
+                
+                if (lowerMessage.includes('rather not say')) {
+                    showBotMessage(
+                        `No problem at all. Your privacy is important to me.\n\n` +
+                        `Let's focus on understanding the document. What questions do you have?`
+                    );
+                    currentPhase = "document_qa";
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        // Document Q&A phase
+        function handleDocumentQA(message) {
+            if (currentPhase === "document_qa" && currentDocumentQA) {
+                // Use the token-efficient Q&A
+                handleDocumentQuestion(message);
+                return true;
+            }
+            return false;
+        }
+
+        // Token-efficient document Q&A handler
+        async function handleDocumentQuestion(question) {
+            if (!currentDocumentQA) {
+                showBotMessage("I don't have a document loaded. Would you like to upload one?");
+                return;
+            }
+            
+            showTypingIndicator();
+            
+            try {
+                // This uses the token-efficient approach
+                const answer = await currentDocumentQA.answerQuestion(question);
+                
+                hideTypingIndicator();
+                showBotMessage(answer);
+                
+                // Suggest follow-up questions based on extracted data
+                const followUps = generateSmartFollowUps(question);
+                if (followUps.length > 0) {
+                    setTimeout(() => {
+                        showBotMessage(
+                            "Would you like to know about:",
+                            followUps
+                        );
+                    }, 1000);
+                }
+                
+            } catch (error) {
+                hideTypingIndicator();
+                showBotMessage(
+                    "I had trouble finding that information. Could you try asking in a different way?"
+                );
+            }
+        }
+
+        // Generate follow-up questions without using tokens
+        function generateSmartFollowUps(lastQuestion) {
+            const doc = userHistory.currentDocument;
+            if (!doc) return [];
+            
+            const followUps = [];
+            
+            // Based on what's in the document
+            if (doc.extracted.medications.length > 0 && !lastQuestion.includes('medication')) {
+                followUps.push("→ Tell me about the medications");
+            }
+            if (doc.extracted.dates.length > 0 && !lastQuestion.includes('date')) {
+                followUps.push("→ What are the important dates?");
+            }
+            if (doc.extracted.conditions.length > 0 && !lastQuestion.includes('condition')) {
+                followUps.push("→ Explain the conditions mentioned");
+            }
+            
+            return followUps.slice(0, 3); // Limit to 3 suggestions
         }
 
         // Sofia's Response Patterns - Styling Guide for Consistent Interactions
@@ -5359,6 +5516,15 @@ Given what we've discussed, how confident are you that you can address these con
                     updateSessionRiskAssessment();
                     return;
                 }
+            }
+
+            // DOCUMENT HANDLING - Check for document-related phases first
+            if (handleDocumentReviewResponses(message)) {
+                return;
+            }
+            
+            if (handleDocumentQA(message)) {
+                return;
             }
             
             // STORY MOMENT DETECTION
