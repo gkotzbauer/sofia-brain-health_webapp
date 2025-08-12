@@ -5974,6 +5974,13 @@ Given what we've discussed, how confident are you that you can address these con
                     confidence: 0.95,
                     reason: 'user_wants_to_discuss_documents'
                 },
+                // Document content discussion (your specific case)
+                {
+                    pattern: /(?:want\s+to\s+)?(?:discuss|talk\s+about|go\s+over)\s+(?:the\s+)?(?:content|information|details)\s+(?:in\s+a\s+)?(?:document|paper|report)\s+(?:my\s+)?(?:provider|doctor|clinician|therapist)\s+(?:gave\s+)?(?:to\s+)?(?:me)/i,
+                    topic: 'discuss_document_content',
+                    confidence: 0.95,
+                    reason: 'user_wants_to_discuss_document_content'
+                },
                 // Health concerns and questions
                 {
                     pattern: /(?:want\s+to\s+)?(?:discuss|talk\s+about|ask\s+about)\s+(?:my\s+)?(?:health|symptoms|condition|concerns)/i,
@@ -6161,10 +6168,17 @@ Given what we've discussed, how confident are you that you can address these con
             }
             console.log('❌ No specific situation patterns matched');
             
-            // Fallback to general topic detection for less specific cases
+            // CRITICAL FIX: If we have a high-confidence pattern match, NEVER fall back to generic detection
+            // This prevents the "Is that right?" responses for typed messages
+            if (userInput.includes('document') || userInput.includes('provider') || userInput.includes('doctor') || 
+                userInput.includes('health') || userInput.includes('medical') || userInput.includes('discuss') ||
+                userInput.includes('talk about') || userInput.includes('go over')) {
+                console.log('🚫 Preventing generic fallback for medical/document topics');
+                return { shouldSwitch: false };
+            }
+            
+            // Fallback to general topic detection for less specific cases (only for non-medical topics)
             const generalTopicIndicators = {
-                health: ['health', 'medical', 'doctor', 'appointment', 'symptoms', 'pain', 'medication', 'treatment'],
-                documents: ['document', 'paper', 'report', 'results', 'lab', 'test', 'prescription', 'medical record'],
                 family: ['family', 'child', 'parent', 'spouse', 'partner', 'relationship', 'marriage'],
                 work: ['work', 'job', 'career', 'boss', 'colleague', 'meeting', 'project', 'stress'],
                 emotions: ['emotion', 'sad', 'happy', 'angry', 'anxious', 'depressed', 'worried'],
@@ -6173,7 +6187,7 @@ Given what we've discussed, how confident are you that you can address these con
                 challenges: ['problem', 'challenge', 'difficulty', 'struggle', 'obstacle', 'barrier', 'issue']
             };
             
-            // Check if user input contains general topic indicators
+            // Check if user input contains general topic indicators (excluding medical/health topics)
             for (const [topic, keywords] of Object.entries(generalTopicIndicators)) {
                 const hasTopicKeywords = keywords.some(keyword => lowerInput.includes(keyword));
                 const isRelevantToCurrentPhase = isTopicRelevantToPhase(topic, currentPhase);
@@ -6374,6 +6388,15 @@ Given what we've discussed, how confident are you that you can address these con
                         "→ Ask questions about medical terms",
                         "→ Discuss what you learned from a document",
                         "→ Get help organizing medical information"
+                    ]
+                },
+                discuss_document_content: {
+                    message: `I'd be happy to help you discuss the content of that document from your provider! Medical documents can be confusing, and it's completely normal to want to go over the details together.`,
+                    options: [
+                        "→ Upload the document so I can help explain it",
+                        "→ Tell me what the document said",
+                        "→ Ask specific questions about the content",
+                        "→ Discuss how you're feeling about the information"
                     ]
                 },
                 brain_health_learning: {
