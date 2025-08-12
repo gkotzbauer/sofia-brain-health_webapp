@@ -1694,13 +1694,13 @@
                 const stopWords = ['the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but'];
                 return words
                     .filter(w => w.length > 3 && !stopWords.includes(w))
-                    .slice(0, 0);
+                    .slice(0, 10);
             }
             
             hashText(text) {
                 // Simple hash for verification
                 let hash = 0;
-                for (let i = 0; i <text.length; i++) {
+                for (let i = 0; i < text.length; i++) {
                     const char = text.charCodeAt(i);
                     hash = ((hash << 5) - hash) + char;
                     hash = hash & hash;
