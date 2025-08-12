@@ -7509,10 +7509,10 @@ What would you like to focus on?`
                 return;
             }
 
-            // Learn about brain health
+            // Learn about brain health - GOAL-ORIENTED APPROACH
             if (lowerMessage.includes('learn about brain health') || 
                 lowerMessage.includes('brain health education')) {
-                currentPhase = "brain_health_learning";
+                currentPhase = "brain_health_goal_identification";
                 
                 // Initialize conversation state for brain health learning
                 const state = getConversationState();
@@ -7523,23 +7523,280 @@ What would you like to focus on?`
                 console.log('🎯 Initialized brain health learning conversation state');
                 
                 showBotMessage(
-                    `I'm so glad you want to learn more about brain health, ${userHistory.profile.name}! Knowledge truly is power when it comes to taking care of our amazing brains.
+                    `Wonderful! Learning about brain health is such an important part of taking care of yourself. 
 
-Everyone's learning journey is unique, and I want to make sure we explore what's most meaningful for you.
+To help you most effectively, I need to understand your specific needs and goals. 
 
-Help me understand - what brings you to want to learn about brain health today?`,
+**Do you have a particular question or concern you would like to discuss?** Or would you like me to **guide you through a learning plan we will tailor to your needs and goals?**
+
+This will help me provide the most relevant and helpful information for your situation.`,
                     [
-                        "→ I have specific questions or concerns",
-                        "→ I want to create a personalized learning plan",
-                        "→ Someone suggested I learn more about it",
-                        "→ I have documents or information to understand",
-                        "→ I'm curious about keeping my brain healthy as I age"
+                        "→ I have a specific question or concern I want to address",
+                        "→ I want to create a personalized learning plan for my goals",
+                        "→ I'm not sure what I need - help me figure it out",
+                        "→ I have documents or information I need help understanding",
+                        "→ I want to build a story about my brain health journey"
                     ]
                 );
                 return;
             }
 
-            // Handle brain health learning choices
+            // Handle brain health GOAL-ORIENTED choices
+            if (currentPhase === "brain_health_goal_identification") {
+                // User has a specific question or concern
+                if (lowerMessage.includes('specific question') || lowerMessage.includes('concern') || lowerMessage.includes('address')) {
+                    showBotMessage(
+                        `Perfect! Let's get straight to what matters most to you. 
+
+**What specific question or concern do you have about brain health?** 
+
+For example:
+• Are you experiencing memory changes?
+• Do you have trouble concentrating or focusing?
+• Are you worried about cognitive decline?
+• Do you have questions about medications affecting your brain?
+• Something else specific to your situation?
+
+The more specific you can be, the better I can help you.`,
+                        [
+                            "→ I'm experiencing memory changes",
+                            "→ I have trouble concentrating or focusing",
+                            "→ I'm worried about cognitive decline",
+                            "→ I have questions about medications",
+                            "→ My concern is different - let me explain"
+                        ]
+                    );
+                    currentPhase = "brain_health_specific_concern";
+                    return;
+                }
+                
+                // User wants a personalized learning plan
+                if (lowerMessage.includes('personalized learning plan') || lowerMessage.includes('my goals')) {
+                    showBotMessage(
+                        `Excellent! A personalized learning plan will be much more effective than generic information.
+
+**What are your main goals for learning about brain health?** 
+
+For example:
+• Do you want to improve your memory and thinking skills?
+• Are you trying to prevent cognitive decline?
+• Do you want to support someone else's brain health?
+• Are you preparing for a medical appointment or decision?
+• Something else that's important to you?
+
+Understanding your goals will help me create a plan that's truly relevant to your life.`,
+                        [
+                            "→ I want to improve my memory and thinking skills",
+                            "→ I want to prevent cognitive decline",
+                            "→ I want to support someone else's brain health",
+                            "→ I'm preparing for a medical decision",
+                            "→ My goal is different - let me explain"
+                        ]
+                    );
+                    currentPhase = "brain_health_goal_planning";
+                    return;
+                }
+                
+                // User is not sure what they need
+                if (lowerMessage.includes('not sure') || lowerMessage.includes('help me figure it out')) {
+                    showBotMessage(
+                        `That's completely normal! Many people aren't sure where to start with brain health.
+
+Let me help you figure out what you need by asking a few simple questions:
+
+**First, what prompted you to want to learn about brain health today?** 
+
+• Did something specific happen?
+• Did someone suggest it?
+• Are you just curious?
+• Are you worried about something?
+• Something else?
+
+This will help me guide you to the most relevant information.`,
+                        [
+                            "→ Something specific happened",
+                            "→ Someone suggested it",
+                            "→ I'm just curious",
+                            "→ I'm worried about something",
+                            "→ Something else prompted me"
+                        ]
+                    );
+                    currentPhase = "brain_health_clarification";
+                    return;
+                }
+                
+                // User has documents to understand
+                if (lowerMessage.includes('documents') || lowerMessage.includes('information') || lowerMessage.includes('help understanding')) {
+                    showBotMessage(
+                        `Great! Understanding medical documents can be overwhelming, and I'm here to help.
+
+**What kind of information do you have that you'd like help understanding?**
+
+For example:
+• Medical test results or lab reports?
+• Doctor's notes or recommendations?
+• Research articles or educational materials?
+• Something else?
+
+Once I know what you're working with, I can help you understand it and answer your specific questions.`,
+                        [
+                            "→ Medical test results or lab reports",
+                            "→ Doctor's notes or recommendations",
+                            "→ Research articles or materials",
+                            "→ Something else - let me explain",
+                            "→ I want to upload a document now"
+                        ]
+                    );
+                    currentPhase = "brain_health_document_help";
+                    return;
+                }
+                
+                // User wants to build a story about their journey
+                if (lowerMessage.includes('build a story') || lowerMessage.includes('brain health journey')) {
+                    showBotMessage(
+                        `That's a wonderful approach! Building a story about your brain health journey can help you understand your progress and make better decisions.
+
+**What aspect of your brain health journey would you like to focus on?**
+
+For example:
+• Documenting changes you've noticed over time?
+• Creating a plan for your future brain health?
+• Understanding how your lifestyle affects your brain?
+• Something else that's meaningful to you?
+
+This will help us create a story that's truly yours and serves your goals.`,
+                        [
+                            "→ Document changes I've noticed over time",
+                            "→ Create a plan for my future brain health",
+                            "→ Understand how my lifestyle affects my brain",
+                            "→ Something else meaningful to me",
+                            "→ I want to start documenting my journey now"
+                        ]
+                    );
+                    currentPhase = "brain_health_story_building";
+                    return;
+                }
+            }
+            
+            // Handle specific brain health concerns - GET TO THE POINT QUICKLY
+            if (currentPhase === "brain_health_specific_concern") {
+                if (lowerMessage.includes('memory changes') || lowerMessage.includes('memory')) {
+                    showBotMessage(
+                        `Memory changes can be concerning, and I want to help you understand what's happening.
+
+**What specific memory changes are you experiencing?**
+
+For example:
+• Forgetting recent conversations or events?
+• Having trouble remembering names or words?
+• Misplacing things more often than usual?
+• Something else specific to your situation?
+
+The more details you can share, the better I can help you understand what might be happening and what you can do about it.`,
+                        [
+                            "→ Forgetting recent conversations or events",
+                            "→ Having trouble remembering names or words",
+                            "→ Misplacing things more often than usual",
+                            "→ My memory issue is different - let me explain",
+                            "→ I want to document these changes for my doctor"
+                        ]
+                    );
+                    currentPhase = "memory_changes_specific";
+                    return;
+                }
+                
+                if (lowerMessage.includes('concentrating') || lowerMessage.includes('focusing') || lowerMessage.includes('focus')) {
+                    showBotMessage(
+                        `Difficulty concentrating or focusing can really impact your daily life and productivity.
+
+**What specific concentration or focus issues are you experiencing?**
+
+For example:
+• Can't stay focused on tasks for very long?
+• Easily distracted by background noise or activity?
+• Having trouble completing projects or reading?
+• Something else that's affecting your ability to concentrate?
+
+Understanding the specifics will help me give you targeted strategies that actually work for your situation.`,
+                        [
+                            "→ Can't stay focused on tasks for very long",
+                            "→ Easily distracted by background noise or activity",
+                            "→ Having trouble completing projects or reading",
+                            "→ My focus issue is different - let me explain",
+                            "→ I want to create a plan to improve my concentration"
+                        ]
+                    );
+                    currentPhase = "concentration_specific";
+                    return;
+                }
+                
+                if (lowerMessage.includes('cognitive decline') || lowerMessage.includes('worried about')) {
+                    showBotMessage(
+                        `It's completely normal to worry about cognitive decline, especially as we age or if we've seen it in family members.
+
+**What specifically are you worried about?**
+
+For example:
+• Are you concerned about your own cognitive changes?
+• Are you worried about a family member?
+• Are you trying to prevent future decline?
+• Something else that's causing your concern?
+
+Once I understand your specific worry, I can help you address it directly with relevant information and strategies.`,
+                        [
+                            "→ I'm concerned about my own cognitive changes",
+                            "→ I'm worried about a family member",
+                            "→ I want to prevent future cognitive decline",
+                            "→ My worry is different - let me explain",
+                            "→ I want to learn about risk factors and prevention"
+                        ]
+                    );
+                    currentPhase = "cognitive_decline_concern";
+                    return;
+                }
+                
+                if (lowerMessage.includes('medications') || lowerMessage.includes('medication')) {
+                    showBotMessage(
+                        `Medications can definitely affect brain function, and it's important to understand how they might be impacting you.
+
+**What specific questions do you have about medications and your brain?**
+
+For example:
+• Are you experiencing side effects from a medication?
+• Are you worried about how a medication might affect your thinking?
+• Do you want to know about alternatives that might be better for your brain?
+• Something else related to medications and brain health?
+
+This will help me provide the most relevant information about your specific medication situation.`,
+                        [
+                            "→ I'm experiencing side effects from a medication",
+                            "→ I'm worried about how a medication affects my thinking",
+                            "→ I want to know about alternatives better for my brain",
+                            "→ My medication question is different - let me explain",
+                            "→ I want to discuss this with my doctor"
+                        ]
+                    );
+                    currentPhase = "medication_brain_health";
+                    return;
+                }
+                
+                if (lowerMessage.includes('different') || lowerMessage.includes('explain')) {
+                    showBotMessage(
+                        `Of course! I want to understand your specific situation so I can help you most effectively.
+
+**Please tell me about your specific question or concern about brain health.**
+
+What's on your mind? What would you like to know or understand better?
+
+I'm listening, and I want to make sure we focus on what matters most to you.`,
+                        []
+                    );
+                    currentPhase = "brain_health_custom_concern";
+                    return;
+                }
+            }
+            
+            // Handle brain health learning choices (legacy - keeping for backward compatibility)
             if (currentPhase === "brain_health_learning") {
                 if (lowerMessage.includes('specific questions') || lowerMessage.includes('concerns')) {
                     showBotMessage(
