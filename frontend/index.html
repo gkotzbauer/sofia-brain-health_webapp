@@ -1206,7 +1206,7 @@
 
         <div class="memory-section">
             <div class="memory-header">
-                <h2>📖 Your Story Journal</h2>
+                <h2>📖 My Journal</h2>
                 <p>Your brain health journey, captured in chapters</p>
                 <p style="font-size: 11px; color: #888; margin-top: 5px;">✏️ Edit to refine your story | 🗑️ Delete unwanted memories | 📑 Create chapters</p>
             </div>
@@ -6926,9 +6926,21 @@ Shall we explore what makes life meaningful for you?`,
                         const hasCurrentQuest = activeGoals.length > 0;
                         
                         if (hasCurrentQuest) {
-                            showBotMessage(greeting, [
+                            // Get the most recent active goal for the welcome back message
+                            const currentGoal = activeGoals[0]; // Get the first active goal
+                            const userName = userHistory.profile?.name || 'there';
+                            const questDescription = currentGoal.description || 'your current quest';
+                            
+                            const welcomeBackMessage = `Welcome back to your story, ${userName}! Continuing where we left off...
+
+**Your current quest:** "${questDescription}"
+
+What would you like to focus on today?`;
+                            
+                            showBotMessage(welcomeBackMessage, [
                                 "→ Continue current quest",
-                                "→ Start a new quest or ask a few questions"
+                                "→ Start a new quest or ask a few questions",
+                                "→ Update my journal"
                             ]);
                         } else {
                             showBotMessage(greeting, [
@@ -8831,6 +8843,24 @@ What would you like to explore first?`,
                     "→ My situation is different - let me explain"
                 ]);
                 currentPhase = "new_quest_selection";
+                return;
+            }
+            
+            // Update my journal
+            if (lowerMessage.includes('update my journal')) {
+                let response = `Perfect! Let's update your journal and capture what's happening in your brain health journey.\n\n`;
+                response += `**Let's work together to understand what matters most to you right now and update your journal accordingly.**\n\n`;
+                response += `What would you like to add or update in your journal today?`;
+                
+                showBotMessage(response, [
+                    "→ Add a new goal or objective",
+                    "→ Update an existing goal",
+                    "→ Add a new concern or challenge",
+                    "→ Update what matters to me",
+                    "→ Create a new story chapter",
+                    "→ Something else - I'll type it in the message box below"
+                ]);
+                currentPhase = "journal_update";
                 return;
             }
             
