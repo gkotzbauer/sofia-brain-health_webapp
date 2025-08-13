@@ -6929,7 +6929,7 @@ Shall we explore what makes life meaningful for you?`,
                             // Get the most recent active goal for the welcome back message
                             const currentGoal = activeGoals[0]; // Get the first active goal
                             const userName = userHistory.profile?.name || 'there';
-                            const questDescription = currentGoal.description || 'your current quest';
+                            const questDescription = currentGoal.goal || 'your current quest';
                             
                             const welcomeBackMessage = `Welcome back to your story, ${userName}! Continuing where we left off...
 
