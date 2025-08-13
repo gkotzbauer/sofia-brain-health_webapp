@@ -4707,6 +4707,8 @@ Would you like me to build a brain health chapter from this information, or woul
                 const newDocument = addDocumentToUserHistory(documentData);
                 
                 console.log('✅ Document added successfully:', newDocument);
+                console.log('📋 Current pending notifications:', getPendingDocumentNotifications());
+                console.log('📄 Current documents in userHistory:', userHistory.documents);
                 
                 // Show success message
                 showBotMessage(`📄 **Document Uploaded Successfully!**\n\n**File:** ${file.name}\n**Type:** ${file.type}\n**Size:** ${(file.size / 1024).toFixed(1)} KB\n\nYour document has been added to your profile. You can review it when you return to the app or continue with your current conversation.`, [
@@ -4715,11 +4717,8 @@ Would you like me to build a brain health chapter from this information, or woul
                     "→ Update my journal"
                 ]);
                 
-                // Mark notification as delivered since user is actively using the app
-                const notifications = getPendingDocumentNotifications();
-                if (notifications.length > 0) {
-                    markNotificationAsDelivered(notifications[0].id);
-                }
+                // Don't mark notification as delivered yet - let user review it first
+                console.log('📄 Document uploaded, notification ready for review');
                 
             } catch (error) {
                 console.error('❌ Document upload error:', error);
@@ -9214,10 +9213,20 @@ What would you like to explore first?`,
             
             // Review new document now
             if (lowerMessage.includes('review new document now')) {
+                console.log('🔍 Review new document now clicked');
+                
                 const pendingDocs = getPendingDocumentNotifications();
+                console.log('📋 Pending notifications:', pendingDocs);
+                
+                const allDocs = userHistory.documents;
+                console.log('📄 All documents in userHistory:', allDocs);
+                
                 if (pendingDocs.length > 0) {
                     const latestDoc = pendingDocs[0];
+                    console.log('📋 Latest notification:', latestDoc);
+                    
                     const document = userHistory.documents.find(d => d.id === latestDoc.documentId);
+                    console.log('📄 Found document:', document);
                     
                     if (document) {
                         let response = `📄 **Document Review: ${document.fileName}**\n\n`;
@@ -9246,7 +9255,12 @@ What would you like to explore first?`,
                         
                         currentPhase = "document_review";
                         return;
+                    } else {
+                        console.error('❌ Document not found for notification:', latestDoc.documentId);
+                        console.log('🔍 Available document IDs:', userHistory.documents.map(d => d.id));
                     }
+                } else {
+                    console.log('⚠️ No pending notifications found');
                 }
                 
                 // Fallback if no documents found
