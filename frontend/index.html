@@ -1827,7 +1827,9 @@ This will help us provide the most relevant and helpful information for your sit
 
 **What are your main goals for learning about brain health?**
 
-Understanding your goals will help us co-produce a plan that's truly relevant to your life.`,
+Understanding your goals will help us co-produce a plan that's truly relevant to your life.
+
+What would you like to do next?`,
                         options: [
                             "→ I want to improve my memory and thinking skills",
                             "→ I want to prevent cognitive decline",
@@ -1845,7 +1847,9 @@ Understanding your goals will help us co-produce a plan that's truly relevant to
 
 **What specific question or concern do you have about brain health?**
 
-The more specific you can be, the better we can co-produce a plan that addresses your unique needs.`,
+The more specific you can be, the better we can co-produce a plan that addresses your unique needs.
+
+What would you like to do next?`,
                         options: [
                             "→ I'm experiencing memory changes",
                             "→ I have trouble concentrating or focusing",
@@ -2010,7 +2014,9 @@ Understanding your specific needs will help me provide the most relevant informa
 
 **Let's work together to understand more about your specific family history situation and co-produce a plan that helps you live your best life while aging.**
 
-Understanding your specific family history will help us co-produce a plan with the most relevant information about prevention strategies, early detection, and risk management.`,
+Understanding your specific family history will help us co-produce a plan with the most relevant information about prevention strategies, early detection, and risk management.
+
+What would you like to do next?`,
                         options: [
                             "→ Alzheimer's disease runs in my family",
                             "→ Dementia affects multiple family members",
@@ -2026,7 +2032,9 @@ Understanding your specific family history will help us co-produce a plan with t
 
 **Let's work together to understand what specific early warning signs you're experiencing and co-produce a plan that helps you live your best life while aging.**
 
-Understanding your specific symptoms will help us co-produce a plan with the most relevant guidance about when to seek medical attention and what steps to take.`,
+Understanding your specific symptoms will help us co-produce a plan with the most relevant guidance about when to seek medical attention and what steps to take.
+
+What would you like to do next?`,
                         options: [
                             "→ I'm forgetting recent conversations and events",
                             "→ I have trouble finding the right words",
@@ -2042,7 +2050,9 @@ Understanding your specific symptoms will help us co-produce a plan with the mos
 
 **Let's work together to understand your current cognitive strengths and what you want to preserve, and co-produce a maintenance plan that helps you live your best life while aging.**
 
-Understanding your specific goals and current situation will help us co-produce a maintenance strategy that's truly relevant to your life.`,
+Understanding your specific goals and current situation will help us co-produce a maintenance strategy that's truly relevant to your life.
+
+What would you like to do next?`,
                         options: [
                             "→ I want to maintain my memory and recall abilities",
                             "→ I want to keep my problem-solving skills sharp",
@@ -2058,7 +2068,9 @@ Understanding your specific goals and current situation will help us co-produce 
 
 **Let's work together to understand what specific cognitive challenges you want to prepare for and co-produce a resilience strategy that helps you live your best life while aging.**
 
-Understanding your specific resilience goals will help us co-produce a strategy that builds the right kind of protection for your situation.`,
+Understanding your specific resilience goals will help us co-produce a strategy that builds the right kind of protection for your situation.
+
+What would you like to do next?`,
                         options: [
                             "→ I want to prepare for age-related cognitive changes",
                             "→ I want to build resilience against stress and cognitive decline",
@@ -2080,7 +2092,9 @@ Understanding your specific resilience goals will help us co-produce a strategy 
 
 **What specific memory changes are you experiencing?**
 
-The more specific you can be, the better we can co-produce a plan to help you understand what's normal and what might need attention.`,
+The more specific you can be, the better we can co-produce a plan to help you understand what's normal and what might need attention.
+
+What would you like to do next?`,
                         options: [
                             "→ I forget recent events or conversations",
                             "→ I have trouble remembering names or faces",
@@ -2098,7 +2112,9 @@ The more specific you can be, the better we can co-produce a plan to help you un
 
 **What specific concentration or focus issues are you experiencing?**
 
-Understanding your specific challenges will help us co-produce a plan with the most relevant strategies and support.`,
+Understanding your specific challenges will help us co-produce a plan with the most relevant strategies and support.
+
+What would you like to do next?`,
                         options: [
                             "→ I have trouble staying focused on tasks",
                             "→ I get easily distracted by my surroundings",
@@ -2116,7 +2132,9 @@ Understanding your specific challenges will help us co-produce a plan with the m
 
 **What specific questions do you have about medications and your brain?**
 
-Understanding the relationship between medications and brain health can help us co-produce a plan for informed decisions.`,
+Understanding the relationship between medications and brain health can help us co-produce a plan for informed decisions.
+
+What would you like to do next?`,
                         options: [
                             "→ I'm concerned about side effects on memory or thinking",
                             "→ I want to understand how a medication affects brain function",
@@ -2154,7 +2172,9 @@ Understanding the relationship between medications and brain health can help us 
 
 **Feel free to type something else important to you in the message box below.**
 
-Understanding your specific needs will help us co-produce a learning plan that's truly relevant to your life.`,
+Understanding your specific needs will help us co-produce a learning plan that's truly relevant to your life.
+
+What would you like to do next?`,
                         options: [
                             "→ What would success look like for you?",
                             "→ What's the first step you'd like to take?",
@@ -6931,7 +6951,9 @@ Shall we explore what makes life meaningful for you?`,
 
 **Your current quest:** "${questDescription}"
 
-What would you like to focus on today?`;
+What would you like to focus on today?
+
+What would you like to do next?`;
                             
                             showBotMessage(welcomeBackMessage, [
                                 "→ Continue current quest",
@@ -8785,10 +8807,12 @@ What would you like to explore first?`,
                     if (currentGoal.progress && currentGoal.progress.length > 0) {
                         response += `You've made progress on this quest. Let's work together to continue moving forward.\n\n`;
                         response += `**Let's work together to understand what matters most to you about continuing this quest and co-produce a plan that helps you live your best life while aging.**\n\n`;
-                        response += `Understanding your specific needs will help us co-produce a plan that helps you live your best life while aging.`;
+                        response += `Understanding your specific needs will help us co-produce a plan that helps you live your best life while aging.
+
+What would you like to do next?`;
                     } else {
                         response += `This quest is ready for action! Let's work together to get started.\n\n`;
-                        response += `**Let's work together to understand what matters most to you about achieving this goal and co-produce a plan that helps you live your best life while aging.**\n\n`;
+                        response += `**Let's work together to understand what matters most to you about achieving this goal. Then we'll co-produce a plan that helps you live your best life while aging.**\n\n`;
                         response += `Understanding your specific needs will help us co-produce a plan that helps you live your best life while aging.`;
                     }
                     
@@ -8802,13 +8826,8 @@ What would you like to explore first?`,
                     return;
                 } else {
                     response += `I don't see an active quest in your journey yet. Let me help you start one!\n\n`;
-                    response += `**To help you most effectively, I need to understand what matters most to you right now.**\n\n`;
-                    response += `For example:\n`;
-                    response += `• What goal would make the biggest difference in your life?\n`;
-                    response += `• What story do you want to tell about your journey?\n`;
-                    response += `• What concerns do you want to address?\n`;
-                    response += `• Something else that's important to you?\n\n`;
-                    response += `Understanding your specific needs will help me co-produce a plan that helps you live your best life while aging.`;
+                    response += `**Let's work together to understand what matters most to you right now and co-produce a plan that helps you live your best life while aging.**\n\n`;
+                    response += `What would you like to focus on today?`;
                     
                     showBotMessage(response, [
                         "→ I want to set a new goal",
@@ -8829,7 +8848,7 @@ What would you like to explore first?`,
                 
                 // SECOND: Offer the standard options
                 response += `**Let's work together to understand what matters most to you and co-produce a plan that helps you live your best life while aging.**\n\n`;
-                response += `Understanding your specific needs will help us co-produce a plan that helps you live your best life while aging.`;
+                response += `What would you like to focus on today?`;
                 
                 showBotMessage(response, [
                     "→ Learn about brain health",
@@ -8846,7 +8865,9 @@ What would you like to explore first?`,
             if (lowerMessage.includes('update my journal')) {
                 let response = `Perfect! Let's update your journal and capture what's happening in your brain health journey.\n\n`;
                 response += `**Let's work together to understand what matters most to you right now and update your journal accordingly.**\n\n`;
-                response += `What would you like to add or update in your journal today?`;
+                response += `What would you like to add or update in your journal today?
+
+What would you like to do next?`;
                 
                 showBotMessage(response, [
                     "→ Add a new goal or objective",
@@ -8881,7 +8902,9 @@ What would you like to explore first?`,
                     response += `• Set a new goal alongside this one\n`;
                     response += `• Transform this learning journey into a life chapter\n`;
                     response += `• Or something else?\n\n`;
-                    response += `Tell me what feels right for you today.`;
+                    response += `Tell me what feels right for you today.
+
+What would you like to do next?`;
                 } else {
                     response += `This is a perfect time to define what matters to you.\n\n`;
                     response += `Are you thinking about:\n`;
@@ -8959,7 +8982,9 @@ What would you like to explore first?`,
                 response += `• What you're hoping to achieve\n`;
                 response += `• Any concerns or questions you have\n`;
                 response += `• What would be most helpful for you right now\n\n`;
-                response += `We're here to co-produce a plan that helps you live your best life while aging. Your unique situation matters, and we want to understand it fully so we can provide the most relevant support.`;
+                response += `We're here to co-produce a plan that helps you live your best life while aging. Your unique situation matters, and we want to understand it fully so we can provide the most relevant support.
+
+What would you like to do next?`;
                 
                 showBotMessage(response);
                 currentPhase = "waiting_for_user_explanation";
