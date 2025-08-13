@@ -5593,12 +5593,10 @@ Your feedback helps me improve. Thank you for speaking up about this.`;
             // Add concerns
             if (userHistory.concerns && userHistory.concerns.length > 0) {
                 userHistory.concerns.forEach((concern, index) => {
-                    let metadata = `Severity: ${concern.severity}`;
-                    if (concern.updateCount > 1) {
-                        metadata += ` | Updates: ${concern.updateCount}`;
-                    }
-                    if (concern.context) {
-                        metadata += ` | Context: ${concern.context}`;
+                    // Only show user-friendly metadata, not technical system data
+                    let metadata = '';
+                    if (concern.severity && concern.severity !== 'moderate') {
+                        metadata = `Severity: ${concern.severity}`;
                     }
                     memoryDisplayList.push({
                         type: 'concern',
@@ -5615,12 +5613,10 @@ Your feedback helps me improve. Thank you for speaking up about this.`;
             // Add goals
             if (userHistory.goals && userHistory.goals.length > 0) {
                 userHistory.goals.forEach((goal, index) => {
-                    let metadata = `Confidence: ${goal.confidence}/10 | Status: ${goal.status}`;
-                    if (goal.updateCount > 1) {
-                        metadata += ` | Updates: ${goal.updateCount}`;
-                    }
-                    if (goal.linkedBestLifeElements && goal.linkedBestLifeElements.length > 0) {
-                        metadata += ` | Supports: ${goal.linkedBestLifeElements.join(', ')}`;
+                    // Only show user-friendly metadata, not technical system data
+                    let metadata = '';
+                    if (goal.status && goal.status !== 'active') {
+                        metadata = `Status: ${goal.status}`;
                     }
                     memoryDisplayList.push({
                         type: 'goal',
@@ -5637,15 +5633,15 @@ Your feedback helps me improve. Thank you for speaking up about this.`;
             // Add values
             if (userHistory.values && userHistory.values.length > 0) {
                 userHistory.values.forEach((value, index) => {
-                    let metadata = `Importance: ${value.importance}`;
-                    if (value.updateCount > 1) {
-                        metadata += ` | Updates: ${value.updateCount}`;
+                    // Only show user-friendly metadata, not technical system data
+                    let metadata = '';
+                    if (value.importance && value.importance !== 'medium') {
+                        metadata = `Importance: ${value.importance}`;
                     }
                     memoryDisplayList.push({
                         type: 'value',
                         content: value.value,
                         metadata: metadata,
-                        timestamp: value.timestamp,
                         index: index,
                         updateCount: value.updateCount || 1
                     });
