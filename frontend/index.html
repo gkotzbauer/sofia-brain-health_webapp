@@ -1307,7 +1307,7 @@
             <span style="font-size: 18px;">📄</span>
             <span>Upload Document</span>
         </button>
-        <input type="file" id="documentUpload" accept=".txt,.pdf,.doc,.docx,.json,.csv" style="display: none;" onchange="handleDocumentUpload(event)">
+        <input type="file" id="documentUpload" accept=".txt,.pdf,.doc,.docx,.json,.csv" style="display: none;" onchange="handleDocumentUploadForManagement(event)">
     </div>
 
     <!-- Document Review Modal -->
@@ -4662,6 +4662,75 @@ Would you like me to build a brain health chapter from this information, or woul
         }
         
         // ============= END DOCUMENT TESTING FUNCTIONS =============
+        
+        // ============= DOCUMENT UPLOAD HANDLER =============
+        
+        // New document upload handler for document management system
+        async function handleDocumentUploadForManagement(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            console.log('📄 Document upload started:', file.name, file.type, file.size);
+            
+            try {
+                let content = '';
+                
+                // Handle different file types
+                if (file.type.includes('json')) {
+                    // JSON files - read as text and parse
+                    content = await readTextFile(file);
+                    console.log('📄 JSON content read successfully');
+                } else if (file.type === 'application/pdf') {
+                    // PDF files
+                    content = await readPDFFile(file);
+                    console.log('📄 PDF content read successfully');
+                } else if (file.type.includes('text') || file.type.includes('csv')) {
+                    // Text and CSV files
+                    content = await readTextFile(file);
+                    console.log('📄 Text content read successfully');
+                } else {
+                    throw new Error(`Unsupported file type: ${file.type}. Please use JSON, PDF, or text files.`);
+                }
+                
+                // Create document data
+                const documentData = {
+                    fileName: file.name,
+                    content: content,
+                    provider: 'User Upload',
+                    documentType: file.type.includes('json') ? 'json' : file.type.includes('pdf') ? 'pdf' : 'text',
+                    summary: ''
+                };
+                
+                console.log('📄 Adding document to user history:', documentData);
+                
+                // Add to user history using our document management system
+                const newDocument = addDocumentToUserHistory(documentData);
+                
+                console.log('✅ Document added successfully:', newDocument);
+                
+                // Show success message
+                showBotMessage(`📄 **Document Uploaded Successfully!**\n\n**File:** ${file.name}\n**Type:** ${file.type}\n**Size:** ${(file.size / 1024).toFixed(1)} KB\n\nYour document has been added to your profile. You can review it when you return to the app or continue with your current conversation.`, [
+                    "→ Review new document now",
+                    "→ Continue with current conversation",
+                    "→ Update my journal"
+                ]);
+                
+                // Mark notification as delivered since user is actively using the app
+                const notifications = getPendingDocumentNotifications();
+                if (notifications.length > 0) {
+                    markNotificationAsDelivered(notifications[0].id);
+                }
+                
+            } catch (error) {
+                console.error('❌ Document upload error:', error);
+                showBotMessage(`❌ **Document Upload Failed**\n\n**Error:** ${error.message}\n\nPlease try again with a different file format (JSON, PDF, or text files work best).`);
+            } finally {
+                // Reset file input
+                event.target.value = '';
+            }
+        }
+        
+        // ============= END DOCUMENT UPLOAD HANDLER =============
         
         // Visual style functions
         function toggleStyleMenu() {
