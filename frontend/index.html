@@ -9161,6 +9161,110 @@ What would you like to explore first?`,
                 return;
             }
             
+            // Document summarization request
+            if (lowerMessage.includes('yes, please summarize it for me') || lowerMessage.includes('summarize it for me')) {
+                const pendingDocs = getPendingDocumentNotifications();
+                if (pendingDocs.length > 0) {
+                    const latestDoc = pendingDocs[0];
+                    const document = userHistory.documents.find(d => d.id === latestDoc.documentId);
+                    
+                    if (document) {
+                        // For now, create a simple summary (we'll add AI summarization in Bucket 2)
+                        let summary = `📄 **Document Summary: ${document.fileName}**\n\n`;
+                        summary += `**Provider:** ${document.provider}\n`;
+                        summary += `**Document Type:** ${document.documentType.toUpperCase()}\n`;
+                        summary += `**Upload Time:** ${new Date(document.uploadTime).toLocaleString()}\n\n`;
+                        
+                        // Create a basic summary based on content
+                        if (document.content) {
+                            const contentPreview = document.content.substring(0, 300);
+                            summary += `**Content Preview:**\n${contentPreview}${document.content.length > 300 ? '...' : ''}\n\n`;
+                            
+                            // Try to identify key information
+                            if (document.content.toLowerCase().includes('diagnosis')) {
+                                summary += `**Document Purpose:** This appears to be a diagnostic document containing medical information.\n\n`;
+                            }
+                            if (document.content.toLowerCase().includes('brain') || document.content.toLowerCase().includes('cognitive')) {
+                                summary += `**Focus Area:** This document relates to brain health and cognitive function.\n\n`;
+                            }
+                        }
+                        
+                        summary += `**Next Steps:** Would you like me to ask you questions about specific topics in this document, or would you prefer to continue with your current conversation?`;
+                        
+                        // Update the document with the summary
+                        document.summary = summary;
+                        document.isSummarized = true;
+                        saveUserHistory();
+                        
+                        showBotMessage(summary, [
+                            "→ Ask me questions about specific topics",
+                            "→ Continue with my current conversation",
+                            "→ Update my journal"
+                        ]);
+                        
+                        currentPhase = "document_summarized";
+                        return;
+                    }
+                }
+                
+                // Fallback if no documents found
+                showBotMessage("I don't see any documents to summarize at the moment. Would you like to continue with your current conversation or explore something else?");
+                return;
+            }
+            
+            // Ask questions about specific topics in document
+            if (lowerMessage.includes('ask me questions about specific topics') || lowerMessage.includes('ask questions about specific topics')) {
+                const pendingDocs = getPendingDocumentNotifications();
+                if (pendingDocs.length > 0) {
+                    const latestDoc = pendingDocs[0];
+                    const document = userHistory.documents.find(d => d.id === latestDoc.documentId);
+                    
+                    if (document) {
+                        let response = `📄 **Questions About: ${document.fileName}**\n\n`;
+                        response += `Based on your document, I'd like to understand what matters most to you. Here are some questions to help us explore the key topics:\n\n`;
+                        
+                        // Generate relevant questions based on document content
+                        const questions = [];
+                        
+                        if (document.content.toLowerCase().includes('diagnosis')) {
+                            questions.push("• What aspects of this diagnosis would you like to understand better?");
+                            questions.push("• Are there specific symptoms or changes you're experiencing?");
+                            questions.push("• What questions do you have for your healthcare provider?");
+                        }
+                        
+                        if (document.content.toLowerCase().includes('brain') || document.content.toLowerCase().includes('cognitive')) {
+                            questions.push("• Which cognitive functions are you most concerned about?");
+                            questions.push("• What strategies have you already tried to support your brain health?");
+                            questions.push("• What would success look like for you in managing these concerns?");
+                        }
+                        
+                        if (document.content.toLowerCase().includes('treatment') || document.content.toLowerCase().includes('medication')) {
+                            questions.push("• What are your thoughts about the recommended treatments?");
+                            questions.push("• Are there any concerns about side effects or effectiveness?");
+                            questions.push("• What lifestyle changes might support your treatment plan?");
+                        }
+                        
+                        // Add general questions if no specific ones were generated
+                        if (questions.length === 0) {
+                            questions.push("• What information in this document is most important to you?");
+                            questions.push("• What questions do you have about the content?");
+                            questions.push("• How does this information relate to your current goals?");
+                        }
+                        
+                        response += questions.join('\n') + '\n\n';
+                        response += `**What would you like to focus on first?** Feel free to type your response in the message box below, or let me know which question resonates most with you.`;
+                        
+                        showBotMessage(response);
+                        currentPhase = "document_questions";
+                        return;
+                    }
+                }
+                
+                // Fallback if no documents found
+                showBotMessage("I don't see any documents to ask questions about at the moment. Would you like to continue with your current conversation or explore something else?");
+                return;
+            }
+            
             // Update my journal
             if (lowerMessage.includes('update my journal')) {
                 let response = `Perfect! Let's update your journal and capture what's happening in your brain health journey.\n\n`;
