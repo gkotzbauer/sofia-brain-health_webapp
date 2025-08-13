@@ -822,14 +822,14 @@
         }
 
         .memory-action-btn {
-            background: none;
-            border: none;
-            color: #667eea;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            color: #333;
             cursor: pointer;
             font-size: 12px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            transition: background 0.2s;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
         }
 
         .memory-action-btn:hover {
@@ -843,6 +843,16 @@
 
         .memory-action-btn.delete:hover {
             background: #fee;
+        }
+        
+        .document-test-btn {
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .document-test-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
 
         .memory-edit-form {
@@ -1262,9 +1272,9 @@
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
                     <h3 style="margin-bottom: 15px; color: #333;">🧪 Document Management Testing</h3>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
-                        <button class="memory-action-btn" onclick="testAddDocument()" style="background: #667eea;">📄 Test Add Document</button>
-                        <button class="memory-action-btn" onclick="checkPendingDocuments()" style="background: #51cf66;">🔍 Check Pending</button>
-                        <button class="memory-action-btn" onclick="clearDocumentNotifications()" style="background: #ff6b6b;">🗑️ Clear Notifications</button>
+                        <button class="memory-action-btn document-test-btn" onclick="testAddDocument()" style="background: #667eea; color: white; border-color: #667eea;">📄 Test Add Document</button>
+                        <button class="memory-action-btn document-test-btn" onclick="checkPendingDocuments()" style="background: #51cf66; color: white; border-color: #51cf66;">🔍 Check Pending</button>
+                        <button class="memory-action-btn document-test-btn" onclick="clearDocumentNotifications()" style="background: #ff6b6b; color: white; border-color: #ff6b6b;">🗑️ Clear Notifications</button>
                     </div>
                     <div id="documentTestResults" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px; display: none;">
                         <h4 style="margin-top: 0; color: #333;">Test Results:</h4>
