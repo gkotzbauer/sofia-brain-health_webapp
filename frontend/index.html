@@ -7190,6 +7190,29 @@ Shall we explore what makes life meaningful for you?`,
 
                         greeting += "\n\nWhat would you like to focus on today?";
 
+                        // Check for pending document notifications in main greeting flow
+                        const hasPendingDocs = hasPendingDocuments();
+                        const pendingNotifications = getPendingDocumentNotifications();
+                        
+                        if (hasPendingDocs && pendingNotifications.length > 0) {
+                            const latestNotification = pendingNotifications[0];
+                            greeting += `\n\n📄 **Document Update:** ${latestNotification.message}`;
+                            
+                            // Mark notification as delivered
+                            markNotificationAsDelivered(latestNotification.id);
+                            
+                            showBotMessage(greeting, [
+                                "→ Review new document now",
+                                "→ Learn about brain health",
+                                "→ Prepare for a visit with my doctor",
+                                "→ Discuss the information my doctor gave to me",
+                                "→ Update what matters to me or a prior story",
+                                "→ Something else - I'll enter it in the message box below"
+                            ]);
+                            currentPhase = "main_conversation";
+                            return;
+                        }
+
                         // Check if user has a current quest
                         const hasCurrentQuest = activeGoals.length > 0;
                         
@@ -7243,7 +7266,7 @@ Shall we explore what makes life meaningful for you?`,
                                 markNotificationAsDelivered(latestNotification.id);
                                 
                                 showBotMessage(documentMessage, [
-                                    "→ Review new document",
+                                    "→ Review new document now",
                                     "→ Start a new quest or ask a few questions",
                                     "→ Update my journal"
                                 ]);
@@ -9149,6 +9172,48 @@ What would you like to explore first?`,
             
             // Review new document
             if (lowerMessage.includes('review new document')) {
+                const pendingDocs = getPendingDocumentNotifications();
+                if (pendingDocs.length > 0) {
+                    const latestDoc = pendingDocs[0];
+                    const document = userHistory.documents.find(d => d.id === latestDoc.documentId);
+                    
+                    if (document) {
+                        let response = `📄 **Document Review: ${document.fileName}**\n\n`;
+                        response += `**Provider:** ${document.provider}\n`;
+                        response += `**Upload Time:** ${new Date(document.uploadTime).toLocaleString()}\n\n`;
+                        
+                        if (document.summary && document.isSummarized) {
+                            response += `**Document Summary:**\n${document.summary}\n\n`;
+                            response += `Would you like me to ask any questions about specific topics in this document?`;
+                            
+                            showBotMessage(response, [
+                                "→ Yes, ask me questions about specific topics",
+                                "→ No, I'll review it myself",
+                                "→ Continue with my current conversation"
+                            ]);
+                        } else {
+                            response += `**Document Content:**\n${document.content.substring(0, 200)}${document.content.length > 200 ? '...' : ''}\n\n`;
+                            response += `Would you like me to summarize the purpose and content of this document for you?`;
+                            
+                            showBotMessage(response, [
+                                "→ Yes, please summarize it for me",
+                                "→ No, I'll review it myself",
+                                "→ Continue with my current conversation"
+                            ]);
+                        }
+                        
+                        currentPhase = "document_review";
+                        return;
+                    }
+                }
+                
+                // Fallback if no documents found
+                showBotMessage("I don't see any new documents to review at the moment. Would you like to continue with your current conversation or explore something else?");
+                return;
+            }
+            
+            // Review new document now
+            if (lowerMessage.includes('review new document now')) {
                 const pendingDocs = getPendingDocumentNotifications();
                 if (pendingDocs.length > 0) {
                     const latestDoc = pendingDocs[0];
