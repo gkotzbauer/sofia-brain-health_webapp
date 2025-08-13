@@ -4458,40 +4458,70 @@ Would you like me to build a brain health chapter from this information, or woul
         
         // Function to add a new document to user history
         function addDocumentToUserHistory(documentData) {
-            const newDocument = {
-                id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                fileName: documentData.fileName || 'Unknown Document',
-                content: documentData.content || '',
-                provider: documentData.provider || 'Unknown Provider',
-                uploadTime: new Date().toISOString(),
-                documentType: documentData.documentType || 'pdf',
-                summary: documentData.summary || '',
-                isSummarized: false,
-                status: 'pending_review'
-            };
+            console.log('📄 addDocumentToUserHistory called with:', documentData);
             
-            userHistory.documents.push(newDocument);
-            
-            // Create notification
-            const notification = {
-                id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                documentId: newDocument.id,
-                timestamp: new Date().toISOString(),
-                isRead: false,
-                isDelivered: false,
-                message: `Your provider ${newDocument.provider} has uploaded a new document: ${newDocument.fileName}`
-            };
-            
-            userHistory.documentNotifications.push(notification);
-            userHistory.pendingDocuments.push(newDocument.id);
-            
-            // Save to localStorage
-            saveUserHistory();
-            
-            console.log('📄 Document added:', newDocument);
-            console.log('🔔 Notification created:', notification);
-            
-            return newDocument;
+            try {
+                const newDocument = {
+                    id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    fileName: documentData.fileName || 'Unknown Document',
+                    content: documentData.content || '',
+                    provider: documentData.provider || 'Unknown Provider',
+                    uploadTime: new Date().toISOString(),
+                    documentType: documentData.documentType || 'pdf',
+                    summary: documentData.summary || '',
+                    isSummarized: false,
+                    status: 'pending_review'
+                };
+                
+                console.log('📄 New document object created:', newDocument);
+                
+                if (!userHistory.documents) {
+                    console.log('⚠️ userHistory.documents not initialized, creating array');
+                    userHistory.documents = [];
+                }
+                
+                userHistory.documents.push(newDocument);
+                console.log('📄 Document added to userHistory.documents');
+                
+                // Create notification
+                const notification = {
+                    id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    documentId: newDocument.id,
+                    timestamp: new Date().toISOString(),
+                    isRead: false,
+                    isDelivered: false,
+                    message: `Your provider ${newDocument.provider} has uploaded a new document: ${newDocument.fileName}`
+                };
+                
+                if (!userHistory.documentNotifications) {
+                    console.log('⚠️ userHistory.documentNotifications not initialized, creating array');
+                    userHistory.documentNotifications = [];
+                }
+                
+                if (!userHistory.pendingDocuments) {
+                    console.log('⚠️ userHistory.pendingDocuments not initialized, creating array');
+                    userHistory.pendingDocuments = [];
+                }
+                
+                userHistory.documentNotifications.push(notification);
+                userHistory.pendingDocuments.push(newDocument.id);
+                
+                console.log('🔔 Notification and pending document added');
+                
+                // Save to localStorage
+                console.log('💾 Saving to localStorage...');
+                saveUserHistory();
+                console.log('✅ Saved to localStorage');
+                
+                console.log('📄 Final document added:', newDocument);
+                console.log('🔔 Final notification created:', notification);
+                
+                return newDocument;
+                
+            } catch (error) {
+                console.error('❌ Error in addDocumentToUserHistory:', error);
+                throw error;
+            }
         }
         
         // Function to check if user has pending documents
@@ -4528,35 +4558,55 @@ Would you like me to build a brain health chapter from this information, or woul
         
         // Function to test adding a document
         function testAddDocument() {
-            const testDocument = {
-                fileName: 'Test Lab Results.pdf',
-                content: 'This is a test document content for testing the document management system.',
-                provider: 'Dr. Test Provider',
-                documentType: 'pdf',
-                summary: 'Test lab results showing normal ranges.'
-            };
+            console.log('🧪 testAddDocument function called');
             
-            const newDoc = addDocumentToUserHistory(testDocument);
-            
-            // Show test results
-            const testResults = document.getElementById('documentTestResults');
-            const testContent = document.getElementById('documentTestContent');
-            
-            testContent.innerHTML = `
-                <p><strong>✅ Document Added Successfully!</strong></p>
-                <p><strong>File:</strong> ${newDoc.fileName}</p>
-                <p><strong>Provider:</strong> ${newDoc.provider}</p>
-                <p><strong>Upload Time:</strong> ${new Date(newDoc.uploadTime).toLocaleString()}</p>
-                <p><strong>Document ID:</strong> ${newDoc.id}</p>
-                <p><strong>Notification Created:</strong> Yes</p>
-                <p><strong>Pending Documents:</strong> ${userHistory.pendingDocuments.length}</p>
-                <p><strong>Total Notifications:</strong> ${userHistory.documentNotifications.length}</p>
-            `;
-            
-            testResults.style.display = 'block';
-            
-            // Update memory display to show new document
-            updateMemoryDisplay();
+            try {
+                const testDocument = {
+                    fileName: 'Test Lab Results.pdf',
+                    content: 'This is a test document content for testing the document management system.',
+                    provider: 'Dr. Test Provider',
+                    documentType: 'pdf',
+                    summary: 'Test lab results showing normal ranges.'
+                };
+                
+                console.log('📄 Test document data:', testDocument);
+                console.log('👤 Current userHistory:', userHistory);
+                
+                const newDoc = addDocumentToUserHistory(testDocument);
+                console.log('✅ Document added successfully:', newDoc);
+                
+                // Show test results
+                const testResults = document.getElementById('documentTestResults');
+                const testContent = document.getElementById('documentTestContent');
+                
+                if (!testResults || !testContent) {
+                    console.error('❌ Test results elements not found:', { testResults, testContent });
+                    alert('Test results elements not found. Check console for details.');
+                    return;
+                }
+                
+                testContent.innerHTML = `
+                    <p><strong>✅ Document Added Successfully!</strong></p>
+                    <p><strong>File:</strong> ${newDoc.fileName}</p>
+                    <p><strong>Provider:</strong> ${newDoc.provider}</p>
+                    <p><strong>Upload Time:</strong> ${new Date(newDoc.uploadTime).toLocaleString()}</p>
+                    <p><strong>Document ID:</strong> ${newDoc.id}</p>
+                    <p><strong>Notification Created:</strong> Yes</p>
+                    <p><strong>Pending Documents:</strong> ${userHistory.pendingDocuments.length}</p>
+                    <p><strong>Total Notifications:</strong> ${userHistory.documentNotifications.length}</p>
+                `;
+                
+                testResults.style.display = 'block';
+                console.log('📊 Test results displayed');
+                
+                // Update memory display to show new document
+                updateMemoryDisplay();
+                console.log('🔄 Memory display updated');
+                
+            } catch (error) {
+                console.error('❌ Error in testAddDocument:', error);
+                alert('Error occurred while testing document addition. Check console for details.');
+            }
         }
         
         // Function to check pending documents
