@@ -1257,6 +1257,20 @@
         <button class="memory-action-btn" onclick="buildBrainHealthChapter()" style="margin-right: 10px;">📖 Build Chapter</button>
         <button class="memory-action-btn delete" onclick="clearAllData()">🗑️ Clear All Data</button>
                 </div>
+                
+                <!-- Document Management Test Interface (NEW) -->
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                    <h3 style="margin-bottom: 15px; color: #333;">🧪 Document Management Testing</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                        <button class="memory-action-btn" onclick="testAddDocument()" style="background: #667eea;">📄 Test Add Document</button>
+                        <button class="memory-action-btn" onclick="checkPendingDocuments()" style="background: #51cf66;">🔍 Check Pending</button>
+                        <button class="memory-action-btn" onclick="clearDocumentNotifications()" style="background: #ff6b6b;">🗑️ Clear Notifications</button>
+                    </div>
+                    <div id="documentTestResults" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px; display: none;">
+                        <h4 style="margin-top: 0; color: #333;">Test Results:</h4>
+                        <div id="documentTestContent"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -4418,13 +4432,177 @@ Would you like me to build a brain health chapter from this information, or woul
                 emotionalStates: [],  
                 
                 // Session Summaries
-                sessions: []  
+                sessions: [],
+                
+                // Document Management (NEW)
+                documents: [],
+                documentNotifications: [],
+                pendingDocuments: []
             };
         }
 
         // Initialize with default structure
         let userHistory = createDefaultUserHistory();
 
+        // ============= DOCUMENT MANAGEMENT FUNCTIONS =============
+        
+        // Function to add a new document to user history
+        function addDocumentToUserHistory(documentData) {
+            const newDocument = {
+                id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                fileName: documentData.fileName || 'Unknown Document',
+                content: documentData.content || '',
+                provider: documentData.provider || 'Unknown Provider',
+                uploadTime: new Date().toISOString(),
+                documentType: documentData.documentType || 'pdf',
+                summary: documentData.summary || '',
+                isSummarized: false,
+                status: 'pending_review'
+            };
+            
+            userHistory.documents.push(newDocument);
+            
+            // Create notification
+            const notification = {
+                id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                documentId: newDocument.id,
+                timestamp: new Date().toISOString(),
+                isRead: false,
+                isDelivered: false,
+                message: `Your provider ${newDocument.provider} has uploaded a new document: ${newDocument.fileName}`
+            };
+            
+            userHistory.documentNotifications.push(notification);
+            userHistory.pendingDocuments.push(newDocument.id);
+            
+            // Save to localStorage
+            saveUserHistory();
+            
+            console.log('📄 Document added:', newDocument);
+            console.log('🔔 Notification created:', notification);
+            
+            return newDocument;
+        }
+        
+        // Function to check if user has pending documents
+        function hasPendingDocuments() {
+            return userHistory.pendingDocuments.length > 0;
+        }
+        
+        // Function to get pending document notifications
+        function getPendingDocumentNotifications() {
+            return userHistory.documentNotifications.filter(notif => !notif.isDelivered);
+        }
+        
+        // Function to mark notification as delivered
+        function markNotificationAsDelivered(notificationId) {
+            const notification = userHistory.documentNotifications.find(n => n.id === notificationId);
+            if (notification) {
+                notification.isDelivered = true;
+                saveUserHistory();
+            }
+        }
+        
+        // Function to mark notification as read
+        function markNotificationAsRead(notificationId) {
+            const notification = userHistory.documentNotifications.find(n => n.id === notificationId);
+            if (notification) {
+                notification.isRead = true;
+                saveUserHistory();
+            }
+        }
+        
+                // ============= END DOCUMENT MANAGEMENT FUNCTIONS =============
+        
+        // ============= DOCUMENT TESTING FUNCTIONS =============
+        
+        // Function to test adding a document
+        function testAddDocument() {
+            const testDocument = {
+                fileName: 'Test Lab Results.pdf',
+                content: 'This is a test document content for testing the document management system.',
+                provider: 'Dr. Test Provider',
+                documentType: 'pdf',
+                summary: 'Test lab results showing normal ranges.'
+            };
+            
+            const newDoc = addDocumentToUserHistory(testDocument);
+            
+            // Show test results
+            const testResults = document.getElementById('documentTestResults');
+            const testContent = document.getElementById('documentTestContent');
+            
+            testContent.innerHTML = `
+                <p><strong>✅ Document Added Successfully!</strong></p>
+                <p><strong>File:</strong> ${newDoc.fileName}</p>
+                <p><strong>Provider:</strong> ${newDoc.provider}</p>
+                <p><strong>Upload Time:</strong> ${new Date(newDoc.uploadTime).toLocaleString()}</p>
+                <p><strong>Document ID:</strong> ${newDoc.id}</p>
+                <p><strong>Notification Created:</strong> Yes</p>
+                <p><strong>Pending Documents:</strong> ${userHistory.pendingDocuments.length}</p>
+                <p><strong>Total Notifications:</strong> ${userHistory.documentNotifications.length}</p>
+            `;
+            
+            testResults.style.display = 'block';
+            
+            // Update memory display to show new document
+            updateMemoryDisplay();
+        }
+        
+        // Function to check pending documents
+        function checkPendingDocuments() {
+            const testResults = document.getElementById('documentTestResults');
+            const testContent = document.getElementById('documentTestContent');
+            
+            const pendingCount = userHistory.pendingDocuments.length;
+            const notifications = getPendingDocumentNotifications();
+            
+            testContent.innerHTML = `
+                <p><strong>📊 Document Status Report:</strong></p>
+                <p><strong>Pending Documents:</strong> ${pendingCount}</p>
+                <p><strong>Undelivered Notifications:</strong> ${notifications.length}</p>
+                <p><strong>Total Documents:</strong> ${userHistory.documents.length}</p>
+                <p><strong>Total Notifications:</strong> ${userHistory.documentNotifications.length}</p>
+                
+                ${notifications.length > 0 ? `
+                <div style="margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 5px;">
+                    <p><strong>🔔 Recent Notifications:</strong></p>
+                    ${notifications.slice(0, 3).map(notif => `
+                        <div style="margin: 5px 0; padding: 5px; background: white; border-radius: 3px;">
+                            <strong>${notif.message}</strong><br>
+                            <small>Time: ${new Date(notif.timestamp).toLocaleString()}</small>
+                        </div>
+                    `).join('')}
+                </div>
+                ` : '<p><em>No pending notifications</em></p>'}
+            `;
+            
+            testResults.style.display = 'block';
+        }
+        
+        // Function to clear document notifications
+        function clearDocumentNotifications() {
+            userHistory.documentNotifications = [];
+            userHistory.pendingDocuments = [];
+            saveUserHistory();
+            
+            const testResults = document.getElementById('documentTestResults');
+            const testContent = document.getElementById('documentTestContent');
+            
+            testContent.innerHTML = `
+                <p><strong>🗑️ All Document Notifications Cleared!</strong></p>
+                <p>Pending documents: 0</p>
+                <p>Notifications: 0</p>
+            `;
+            
+            testResults.style.display = 'block';
+            
+            // Update memory display
+            updateMemoryDisplay();
+        }
+        
+        // ============= END DOCUMENT TESTING FUNCTIONS =============
+        
         // Visual style functions
         function toggleStyleMenu() {
             const menu = document.getElementById('styleMenu');
@@ -6933,25 +7111,63 @@ Shall we explore what makes life meaningful for you?`,
                             const userName = userHistory.profile?.name || 'there';
                             const questDescription = currentGoal.goal || 'your current quest';
                             
-                            const welcomeBackMessage = `Welcome back to your story, ${userName}! Continuing where we left off...
-
-**Your current quest:** "${questDescription}"
-
-What would you like to focus on today?`;
+                            // Check for pending document notifications
+                            const hasPendingDocs = hasPendingDocuments();
+                            const pendingNotifications = getPendingDocumentNotifications();
                             
-                            showBotMessage(welcomeBackMessage, [
-                                "→ Continue current quest",
-                                "→ Start a new quest or ask a few questions",
-                                "→ Update my journal"
-                            ]);
+                            let welcomeBackMessage = `Welcome back to your story, ${userName}! Continuing where we left off...
+
+**Your current quest:** "${questDescription}"`;
+
+                            // Add document notification if there are pending documents
+                            if (hasPendingDocs && pendingNotifications.length > 0) {
+                                const latestNotification = pendingNotifications[0];
+                                welcomeBackMessage += `\n\n📄 **Document Update:** ${latestNotification.message}`;
+                                
+                                // Mark notification as delivered
+                                markNotificationAsDelivered(latestNotification.id);
+                                
+                                showBotMessage(welcomeBackMessage, [
+                                    "→ Continue current quest",
+                                    "→ Start a new quest or ask a few questions",
+                                    "→ Update my journal",
+                                    "→ Review new document"
+                                ]);
+                            } else {
+                                welcomeBackMessage += `\n\nWhat would you like to focus on today?`;
+                                
+                                showBotMessage(welcomeBackMessage, [
+                                    "→ Continue current quest",
+                                    "→ Start a new quest or ask a few questions",
+                                    "→ Update my journal"
+                                ]);
+                            }
                         } else {
-                            showBotMessage(greeting, [
-                                "→ Learn about brain health",
-                                "→ Prepare for a visit with my doctor",
-                                "→ Discuss the information my doctor gave to me",
-                                "→ Update what matters to me or a prior story",
-                                "→ Something else - I'll enter it in the message box below"
-                            ]);
+                            // Check for pending document notifications even without current quest
+                            const hasPendingDocs = hasPendingDocuments();
+                            const pendingNotifications = getPendingDocumentNotifications();
+                            
+                            if (hasPendingDocs && pendingNotifications.length > 0) {
+                                const latestNotification = pendingNotifications[0];
+                                const documentMessage = `📄 **Document Update:** ${latestNotification.message}`;
+                                
+                                // Mark notification as delivered
+                                markNotificationAsDelivered(latestNotification.id);
+                                
+                                showBotMessage(documentMessage, [
+                                    "→ Review new document",
+                                    "→ Start a new quest or ask a few questions",
+                                    "→ Update my journal"
+                                ]);
+                            } else {
+                                showBotMessage(greeting, [
+                                    "→ Learn about brain health",
+                                    "→ Prepare for a visit with my doctor",
+                                    "→ Discuss the information my doctor gave to me",
+                                    "→ Update what matters to me or a prior story",
+                                    "→ Something else - I'll enter it in the message box below"
+                                ]);
+                            }
                         }
                         
                         currentPhase = "main_conversation";
@@ -8840,6 +9056,48 @@ What would you like to explore first?`,
                     "→ My situation is different - let me explain"
                 ]);
                 currentPhase = "new_quest_selection";
+                return;
+            }
+            
+            // Review new document
+            if (lowerMessage.includes('review new document')) {
+                const pendingDocs = getPendingDocumentNotifications();
+                if (pendingDocs.length > 0) {
+                    const latestDoc = pendingDocs[0];
+                    const document = userHistory.documents.find(d => d.id === latestDoc.documentId);
+                    
+                    if (document) {
+                        let response = `📄 **Document Review: ${document.fileName}**\n\n`;
+                        response += `**Provider:** ${document.provider}\n`;
+                        response += `**Upload Time:** ${new Date(document.uploadTime).toLocaleString()}\n\n`;
+                        
+                        if (document.summary && document.isSummarized) {
+                            response += `**Document Summary:**\n${document.summary}\n\n`;
+                            response += `Would you like me to ask any questions about specific topics in this document?`;
+                            
+                            showBotMessage(response, [
+                                "→ Yes, ask me questions about specific topics",
+                                "→ No, I'll review it myself",
+                                "→ Continue with my current conversation"
+                            ]);
+                        } else {
+                            response += `**Document Content:**\n${document.content.substring(0, 200)}${document.content.length > 200 ? '...' : ''}\n\n`;
+                            response += `Would you like me to summarize the purpose and content of this document for you?`;
+                            
+                            showBotMessage(response, [
+                                "→ Yes, please summarize it for me",
+                                "→ No, I'll review it myself",
+                                "→ Continue with my current conversation"
+                            ]);
+                        }
+                        
+                        currentPhase = "document_review";
+                        return;
+                    }
+                }
+                
+                // Fallback if no documents found
+                showBotMessage("I don't see any new documents to review at the moment. Would you like to continue with your current conversation or explore something else?");
                 return;
             }
             
