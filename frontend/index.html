@@ -6484,52 +6484,11 @@ Would you like to:`,
             document.getElementById('documentUpload').click();
         }
 
+        // OLD FUNCTION REPLACED - Now using handleDocumentUploadForManagement
+        // This function is kept for backward compatibility but redirects to the new system
         async function handleDocumentUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            documentProcessing = true;
-            showBotMessage("📄 I'm reading your document and extracting relevant information. This may take a moment...");
-            
-            try {
-                const content = await readFileContent(file);
-                const extracted = await extractProfileVariables(content, file.type);
-                
-                // Track upload if API is available
-                let uploadId = null;
-                if (typeof SofiaAPI !== 'undefined' && SofiaAPI.isAuthenticated()) {
-                    try {
-                        const uploadResult = await SofiaAPI.trackDocumentUpload({
-                            filename: file.name,
-                            fileType: file.type,
-                            fileSize: file.size,
-                            extractedCount: extracted.length,
-                            metadata: {
-                                processedAt: new Date().toISOString(),
-                                extractionMethod: 'client-side'
-                            }
-                        });
-                        uploadId = uploadResult.id;
-                    } catch (error) {
-                        console.error('Failed to track document upload:', error);
-                    }
-                }
-                
-                if (extracted.length > 0) {
-                    extractedVariables = extracted;
-                    extractedVariables.uploadId = uploadId; // Store for later update
-                    showDocumentReview();
-                } else {
-                    showBotMessage("I couldn't find any relevant profile information in this document. Could you try a different document or tell me what information you'd like to add to your profile?");
-                }
-            } catch (error) {
-                console.error('Document processing error:', error);
-                showBotMessage("I had trouble reading your document. Please try again with a different file format (text, PDF, or Word documents work best).");
-            } finally {
-                documentProcessing = false;
-                // Reset file input
-                event.target.value = '';
-            }
+            console.log('🔄 Redirecting to new document management system...');
+            await handleDocumentUploadForManagement(event);
         }
 
         async function readFileContent(file) {
