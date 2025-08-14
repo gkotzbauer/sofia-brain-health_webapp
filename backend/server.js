@@ -23,8 +23,8 @@ const goalRoutes = require('./routes/goals');
 const chapterRoutes = require('./routes/chapters');
 const adminRoutes = require('./routes/admin');
 
-// Import test routes for development
-const documentTestRoutes = require('./routes/documents-test');
+// Import simplified document routes (no database required)
+const documentSimpleRoutes = require('./routes/documents-simple');
 
 // Initialize Express app
 const app = express();
@@ -146,7 +146,7 @@ app.get('/', (req, res) => {
       goals: '/api/goals/*',
       chapters: '/api/story-chapters/*',
       admin: '/api/admin/*',
-      test: '/api/test/documents/*'
+      documents: '/api/documents/*'
     },
     documentation: 'This is a backend API server. Use the endpoints above to interact with the Sofia Brain Health Companion application.'
   });
@@ -164,8 +164,8 @@ app.use('/api/goals', authenticateToken, goalRoutes);
 app.use('/api/story-chapters', authenticateToken, chapterRoutes);
 app.use('/api/admin', authenticateToken, adminRoutes); // Admin routes
 
-// Test routes (no authentication required)
-app.use('/api/test/documents', documentTestRoutes);
+// Simplified document routes (no authentication required for testing)
+app.use('/api/documents', documentSimpleRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
