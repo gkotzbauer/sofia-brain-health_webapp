@@ -7226,6 +7226,18 @@ Shall we explore what makes life meaningful for you?`,
                             return;
                         }
 
+                        // Add a simple way to test document notifications
+                        showBotMessage(greeting, [
+                            "→ Learn about brain health",
+                            "→ Prepare for a visit with my doctor",
+                            "→ Discuss the information my doctor gave to me",
+                            "→ Update what matters to me or a prior story",
+                            "→ Something else - I'll enter it in the message box below",
+                            "🧪 Add Test Document (for testing notifications)"
+                        ]);
+                        currentPhase = "main_conversation";
+                        return;
+
                         // Check if user has a current quest
                         const hasCurrentQuest = activeGoals.length > 0;
                         
@@ -9296,6 +9308,38 @@ What would you like to explore first?`,
                 return;
             }
             
+            // Add test document for testing notifications
+            if (lowerMessage.includes('add test document') || lowerMessage.includes('test document')) {
+                console.log('🧪 Add Test Document clicked');
+                
+                try {
+                    const testDocument = {
+                        fileName: 'Test Brain Health Report.pdf',
+                        content: 'This is a test document showing brain health assessment results. The patient shows normal cognitive function with some areas for improvement in memory and attention. Recommendations include regular exercise, cognitive training, and maintaining social connections.',
+                        provider: 'Dr. Test Brain Health Specialist',
+                        documentType: 'pdf',
+                        summary: 'Brain health assessment showing normal cognitive function with recommendations for improvement.'
+                    };
+                    
+                    const newDoc = addDocumentToUserHistory(testDocument);
+                    console.log('✅ Test document added:', newDoc);
+                    
+                    showBotMessage(`🧪 **Test Document Added Successfully!**\n\n**File:** ${newDoc.fileName}\n**Provider:** ${newDoc.provider}\n**Upload Time:** ${new Date(newDoc.uploadTime).toLocaleString()}\n\n**Document ID:** ${newDoc.id}\n**Notification Created:** Yes\n\nNow refresh your page to see the document notification in your welcome message!`, [
+                        "→ Continue with my current conversation",
+                        "→ Learn about brain health",
+                        "→ Something else - I'll enter it in the message box below"
+                    ]);
+                    
+                    currentPhase = "main_conversation";
+                    return;
+                    
+                } catch (error) {
+                    console.error('❌ Error adding test document:', error);
+                    showBotMessage("Sorry, I encountered an error while adding the test document. Please try again.");
+                    return;
+                }
+            }
+
             // Document summarization request
             if (lowerMessage.includes('yes, please summarize it for me') || lowerMessage.includes('summarize it for me')) {
                 const pendingDocs = getPendingDocumentNotifications();
