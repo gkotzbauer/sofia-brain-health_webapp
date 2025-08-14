@@ -9394,6 +9394,82 @@ What would you like to explore first?`,
                 return;
             }
             
+            // Handle document search requests
+            if (lowerMessage.includes('search for something else in the document') || lowerMessage.includes('search for something else')) {
+                showBotMessage("What would you like me to search for in your document? You can ask me questions like:\n\n• What is my diagnosis?\n• What are the recommendations?\n• What does it say about treatment?\n• What are the test results?\n\nJust type your question in the message box below.", [
+                    "→ Review the full document",
+                    "→ Continue with my current conversation",
+                    "→ Update my journal"
+                ]);
+                currentPhase = "document_search_prompt";
+                return;
+            }
+            
+            // Handle general questions about document content
+            if (lowerMessage.includes('diagnosis') || lowerMessage.includes('what is my') || lowerMessage.includes('what does it say') || lowerMessage.includes('what does the document say')) {
+                console.log('🔍 User asking about document content:', lowerMessage);
+                
+                // Check if we have any documents to search through
+                if (userHistory.documents && userHistory.documents.length > 0) {
+                    // Find the most recent document
+                    const latestDocument = userHistory.documents[userHistory.documents.length - 1];
+                    
+                    if (latestDocument && latestDocument.content) {
+                        console.log('📄 Searching document content for:', lowerMessage);
+                        
+                        // Simple content search for now (we'll add AI search in Bucket 2)
+                        let response = `📄 **Document Content Search: ${latestDocument.fileName}**\n\n`;
+                        
+                        // Search for diagnosis-related content
+                        if (lowerMessage.includes('diagnosis')) {
+                            const diagnosisMatch = latestDocument.content.toLowerCase().match(/diagnosis[:\s]+([^.]+)/i);
+                            if (diagnosisMatch) {
+                                response += `**Diagnosis Found:** ${diagnosisMatch[1].trim()}\n\n`;
+                            } else {
+                                // Look for other diagnostic terms
+                                const diagnosticTerms = ['assessment', 'evaluation', 'findings', 'results', 'conclusion'];
+                                for (const term of diagnosticTerms) {
+                                    if (latestDocument.content.toLowerCase().includes(term)) {
+                                        const termMatch = latestDocument.content.toLowerCase().match(new RegExp(`${term}[:\s]+([^.]+)`, 'i'));
+                                        if (termMatch) {
+                                            response += `**${term.charAt(0).toUpperCase() + term.slice(1)}:** ${termMatch[1].trim()}\n\n`;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // If no specific match found, provide relevant content excerpt
+                        if (response === `📄 **Document Content Search: ${latestDocument.fileName}**\n\n`) {
+                            response += `**Content Excerpt:**\n${latestDocument.content.substring(0, 300)}${latestDocument.content.length > 300 ? '...' : ''}\n\n`;
+                            response += `I found some content in your document. Would you like me to search for something more specific, or would you prefer to review the full document?`;
+                        } else {
+                            response += `**Source:** ${latestDocument.provider}\n**Document:** ${latestDocument.fileName}\n\n`;
+                            response += `This information comes from your uploaded document. Would you like me to search for anything else specific, or would you prefer to continue with your current conversation?`;
+                        }
+                        
+                        showBotMessage(response, [
+                            "→ Search for something else in the document",
+                            "→ Review the full document",
+                            "→ Continue with my current conversation",
+                            "→ Update my journal"
+                        ]);
+                        
+                        currentPhase = "document_search";
+                        return;
+                    }
+                }
+                
+                // If no documents found, provide helpful guidance
+                showBotMessage("I don't see any documents uploaded yet that I can search through. Would you like to upload a document first, or would you prefer to continue with your current conversation?", [
+                    "→ Upload a document",
+                    "→ Continue with my current conversation",
+                    "→ Learn about brain health"
+                ]);
+                return;
+            }
+
             // Ask questions about specific topics in document
             if (lowerMessage.includes('ask me questions about specific topics') || lowerMessage.includes('ask questions about specific topics')) {
                 const pendingDocs = getPendingDocumentNotifications();
