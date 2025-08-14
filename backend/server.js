@@ -23,34 +23,40 @@ const goalRoutes = require('./routes/goals');
 const chapterRoutes = require('./routes/chapters');
 const adminRoutes = require('./routes/admin');
 
+// Import test routes for development
+const documentTestRoutes = require('./routes/documents-test');
+
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Initialize PostgreSQL connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+// Initialize PostgreSQL connection (only if DATABASE_URL is provided)
+let pool = null;
+if (process.env.DATABASE_URL) {
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  });
 
-// Pool error handling
-pool.on('error', (err, client) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
-});
+  // Pool error handling
+  pool.on('error', (err, client) => {
+    console.error('Unexpected error on idle client', err);
+    process.exit(-1);
+  });
 
-// Test database connection
-pool.connect((err, client, done) => {
-  if (err) throw err;
-  client.query('SELECT NOW()', (err, res) => {
-    done();
+  // Test database connection
+  pool.connect((err, client, done) => {
     if (err) {
       console.error('Database connection error:', err.stack);
+      console.log('Running in test mode without database...');
     } else {
       console.log('Database connected:', res.rows[0].now);
+      done();
     }
   });
-});
+} else {
+  console.log('No DATABASE_URL provided - running in test mode without database');
+}
 
 // Initialize Winston logger for HIPAA compliance
 const logger = winston.createLogger({
@@ -139,7 +145,8 @@ app.get('/', (req, res) => {
       feedback: '/api/feedback/*',
       goals: '/api/goals/*',
       chapters: '/api/story-chapters/*',
-      admin: '/api/admin/*'
+      admin: '/api/admin/*',
+      test: '/api/test/documents/*'
     },
     documentation: 'This is a backend API server. Use the endpoints above to interact with the Sofia Brain Health Companion application.'
   });
@@ -156,6 +163,9 @@ app.use('/api/feedback', authenticateToken, feedbackRoutes);
 app.use('/api/goals', authenticateToken, goalRoutes);
 app.use('/api/story-chapters', authenticateToken, chapterRoutes);
 app.use('/api/admin', authenticateToken, adminRoutes); // Admin routes
+
+// Test routes (no authentication required)
+app.use('/api/test/documents', documentTestRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
