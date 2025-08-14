@@ -4841,6 +4841,92 @@ Would you like me to build a brain health chapter from this information, or woul
         
         // ============= END VALUE ALIGNMENT FUNCTIONS =============
         
+        // ============= ACTION PLAN GENERATION FUNCTIONS =============
+        
+        // Function to generate personalized action plan based on About Me profile
+        function generatePersonalizedActionPlan() {
+            console.log('🎯 Generating personalized action plan from About Me data');
+            
+            let actionPlan = `🎯 **Your Personalized Action Plan**\n\n`;
+            actionPlan += `Based on what matters most to you, here's a plan to help you live your best life while aging:\n\n`;
+            
+            // Section 1: Values-Based Actions
+            if (userHistory.aboutMe.bestLifeElements && userHistory.aboutMe.bestLifeElements.length > 0) {
+                actionPlan += `**🌟 What Matters Most to You:**\n`;
+                userHistory.aboutMe.bestLifeElements.forEach((element, index) => {
+                    actionPlan += `${index + 1}. **${element.element}** - ${element.description || 'Important to your well-being'}\n`;
+                });
+                actionPlan += `\n`;
+            }
+            
+            // Section 2: Concern-Based Actions
+            if (userHistory.aboutMe.concerns && userHistory.aboutMe.concerns.length > 0) {
+                actionPlan += `**⚠️ Addressing Your Concerns:**\n`;
+                userHistory.aboutMe.concerns.forEach((concern, index) => {
+                    actionPlan += `${index + 1}. **${concern.concern}** - ${concern.description || 'Area for improvement'}\n`;
+                });
+                actionPlan += `\n`;
+            }
+            
+            // Section 3: Specific Action Steps
+            actionPlan += `**🚀 Your Action Steps:**\n`;
+            
+            // Generate actions based on values
+            if (userHistory.aboutMe.bestLifeElements && userHistory.aboutMe.bestLifeElements.length > 0) {
+                const primaryValue = userHistory.aboutMe.bestLifeElements[0];
+                actionPlan += `1. **Strengthen ${primaryValue.element.toLowerCase()}** - Set aside 15 minutes daily to focus on this area\n`;
+                actionPlan += `2. **Create ${primaryValue.element.toLowerCase()} reminders** - Use visual cues or calendar alerts\n`;
+                actionPlan += `3. **Track progress** - Note small wins each day in your journal\n`;
+            }
+            
+            // Generate actions based on concerns
+            if (userHistory.aboutMe.concerns && userHistory.aboutMe.concerns.length > 0) {
+                const primaryConcern = userHistory.aboutMe.concerns[0];
+                actionPlan += `4. **Address ${primaryConcern.concern.toLowerCase()}** - Research strategies and start with one small change\n`;
+                actionPlan += `5. **Seek support** - Consider talking to professionals or joining support groups\n`;
+            }
+            
+            // Section 4: Brain Health Integration
+            actionPlan += `\n**🧠 Brain Health Integration:**\n`;
+            actionPlan += `• **Daily cognitive exercises** - 10-15 minutes of brain training\n`;
+            actionPlan += `• **Physical activity** - 30 minutes of movement (walking, dancing, etc.)\n`;
+            actionPlan += `• **Social connection** - Reach out to one person daily\n`;
+            actionPlan += `• **Quality sleep** - Aim for 7-9 hours with consistent schedule\n`;
+            actionPlan += `• **Stress management** - Practice deep breathing or meditation\n`;
+            
+            // Section 5: Progress Tracking
+            actionPlan += `\n**📊 Progress Tracking:**\n`;
+            actionPlan += `• **Weekly check-ins** - Review what's working and what needs adjustment\n`;
+            actionPlan += `• **Monthly milestones** - Celebrate progress and set new goals\n`;
+            actionPlan += `• **Journal entries** - Record your journey and insights\n`;
+            
+            // Section 6: Next Steps
+            actionPlan += `\n**🎯 Your Next Steps:**\n`;
+            actionPlan += `1. **Choose one action** from above to start with today\n`;
+            actionPlan += `2. **Set a specific time** to work on it\n`;
+            actionPlan += `3. **Tell someone** about your plan for accountability\n`;
+            actionPlan += `4. **Start small** - 5-10 minutes is perfect to begin\n`;
+            
+            // Add confidence level context
+            if (userHistory.aboutMe.confidenceLevel) {
+                const confidence = userHistory.aboutMe.confidenceLevel;
+                if (confidence >= 8) {
+                    actionPlan += `\n**💪 You're feeling confident about your ability to make changes!** This is a great foundation for success.`;
+                } else if (confidence >= 5) {
+                    actionPlan += `\n**🤔 You have some confidence, which is a good start.** Remember, every small step counts toward bigger changes.`;
+                } else {
+                    actionPlan += `\n**🌟 It's okay to start small.** Your confidence will grow as you see progress. Every step forward matters.`;
+                }
+            }
+            
+            actionPlan += `\n\n**Remember:** This plan is based on what you've told me matters most to you. Feel free to adjust it to better fit your life and preferences.`;
+            
+            console.log('✅ Personalized action plan generated');
+            return actionPlan;
+        }
+        
+        // ============= END ACTION PLAN GENERATION FUNCTIONS =============
+        
         // ============= DOCUMENT UPLOAD HANDLER =============
         
         // New document upload handler for document management system
@@ -9612,6 +9698,34 @@ What would you like to explore first?`,
                 return;
             }
             
+            // Handle action plan requests based on About Me profile
+            if (lowerMessage.includes('action plan') || lowerMessage.includes('give me a plan') || lowerMessage.includes('create a plan') || lowerMessage.includes('based on my about me')) {
+                console.log('🎯 User requesting action plan based on About Me profile');
+                
+                // Check if user has About Me data
+                if (!userHistory.aboutMe || !userHistory.aboutMe.bestLifeElements || userHistory.aboutMe.bestLifeElements.length === 0) {
+                    showBotMessage("I'd love to create an action plan for you! First, let's explore what matters most to you in your About Me profile. This will help me create a plan that's truly aligned with your values and concerns.\n\nWould you like to start with your About Me profile?", [
+                        "→ Yes, let's explore what matters to me",
+                        "→ I already have an About Me profile",
+                        "→ Continue with my current conversation"
+                    ]);
+                    return;
+                }
+                
+                // Generate personalized action plan based on About Me data
+                const actionPlan = generatePersonalizedActionPlan();
+                
+                showBotMessage(actionPlan, [
+                    "→ Refine this action plan",
+                    "→ Add more specific goals",
+                    "→ Continue with my current conversation",
+                    "→ Update my journal"
+                ]);
+                
+                currentPhase = "action_plan_review";
+                return;
+            }
+
             // Handle general questions about document content
             if (lowerMessage.includes('diagnosis') || lowerMessage.includes('what is my') || lowerMessage.includes('what does it say') || lowerMessage.includes('what does the document say')) {
                 console.log('🔍 User asking about document content:', lowerMessage);
