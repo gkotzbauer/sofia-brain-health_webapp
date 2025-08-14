@@ -7211,8 +7211,8 @@ Shall we explore what makes life meaningful for you?`,
                             const latestNotification = pendingNotifications[0];
                             greeting += `\n\n📄 **Document Update:** ${latestNotification.message}`;
                             
-                            // Mark notification as delivered
-                            markNotificationAsDelivered(latestNotification.id);
+                            // Don't mark as delivered yet - wait until user actually reviews it
+                            // markNotificationAsDelivered(latestNotification.id);
                             
                             showBotMessage(greeting, [
                                 "→ Review new document now",
@@ -7260,8 +7260,8 @@ Shall we explore what makes life meaningful for you?`,
                                 const latestNotification = pendingNotifications[0];
                                 welcomeBackMessage += `\n\n📄 **Document Update:** ${latestNotification.message}`;
                                 
-                                // Mark notification as delivered
-                                markNotificationAsDelivered(latestNotification.id);
+                                // Don't mark as delivered yet - wait until user actually reviews it
+                                // markNotificationAsDelivered(latestNotification.id);
                                 
                                 showBotMessage(welcomeBackMessage, [
                                     "→ Continue current quest",
@@ -9272,6 +9272,9 @@ What would you like to explore first?`,
                                 console.log('⚠️ Could not fetch backend content, using local:', error.message);
                             }
                         }
+                        
+                        // Mark notification as delivered now that user is reviewing the document
+                        markNotificationAsDelivered(latestDoc.id);
                         
                         if (document.summary && document.isSummarized) {
                             response += `**Document Summary:**\n${document.summary}\n\n`;
