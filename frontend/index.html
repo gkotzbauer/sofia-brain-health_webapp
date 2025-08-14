@@ -4673,52 +4673,66 @@ Would you like me to build a brain health chapter from this information, or woul
             console.log('📄 Document upload started:', file.name, file.type, file.size);
             
             try {
-                let content = '';
-                
-                // Handle different file types
-                if (file.type.includes('json')) {
-                    // JSON files - read as text and parse
-                    content = await readTextFile(file);
-                    console.log('📄 JSON content read successfully');
-                } else if (file.type === 'application/pdf') {
-                    // PDF files
-                    content = await readPDFFile(file);
-                    console.log('📄 PDF content read successfully');
-                } else if (file.type.includes('text') || file.type.includes('csv')) {
-                    // Text and CSV files
-                    content = await readTextFile(file);
-                    console.log('📄 Text content read successfully');
-                } else {
-                    throw new Error(`Unsupported file type: ${file.type}. Please use JSON, PDF, or text files.`);
+                // Check if SofiaAPI is available
+                if (typeof SofiaAPI === 'undefined' || !SofiaAPI.isAuthenticated()) {
+                    throw new Error('Backend API not available. Please ensure you are authenticated.');
                 }
                 
-                // Create document data
-                const documentData = {
-                    fileName: file.name,
-                    content: content,
-                    provider: 'User Upload',
-                    documentType: file.type.includes('json') ? 'json' : file.type.includes('pdf') ? 'pdf' : 'text',
-                    summary: ''
-                };
+                // Show upload progress message
+                showBotMessage(`📄 **Uploading Document...**\n\n**File:** ${file.name}\n**Type:** ${file.type}\n**Size:** ${(file.size / 1024).toFixed(1)} KB\n\nProcessing your document... This may take a moment.`);
                 
-                console.log('📄 Adding document to user history:', documentData);
+                // Upload to backend using SofiaAPI
+                const uploadResult = await SofiaAPI.uploadDocument(file);
                 
-                // Add to user history using our document management system
-                const newDocument = addDocumentToUserHistory(documentData);
+                console.log('✅ Document uploaded to backend:', uploadResult);
                 
-                console.log('✅ Document added successfully:', newDocument);
-                console.log('📋 Current pending notifications:', getPendingDocumentNotifications());
-                console.log('📄 Current documents in userHistory:', userHistory.documents);
-                
-                // Show success message
-                showBotMessage(`📄 **Document Uploaded Successfully!**\n\n**File:** ${file.name}\n**Type:** ${file.type}\n**Size:** ${(file.size / 1024).toFixed(1)} KB\n\nYour document has been added to your profile. You can review it when you return to the app or continue with your current conversation.`, [
+                // Show success message with backend data
+                showBotMessage(`📄 **Document Uploaded Successfully!**\n\n**File:** ${file.name}\n**Type:** ${file.type}\n**Size:** ${(file.size / 1024).toFixed(1)} KB\n\n**Backend Processing:** ${uploadResult.message}\n\nYour document has been processed and stored securely. You can review it now or continue with your current conversation.`, [
                     "→ Review new document now",
                     "→ Continue with current conversation",
                     "→ Update my journal"
                 ]);
                 
-                // Don't mark notification as delivered yet - let user review it first
-                console.log('📄 Document uploaded, notification ready for review');
+                // Store document info in local userHistory for immediate access
+                if (uploadResult.document) {
+                    const localDocument = {
+                        id: uploadResult.document.id,
+                        fileName: uploadResult.document.filename,
+                        content: uploadResult.extractedText || 'Content extracted and stored in backend',
+                        provider: 'Backend Upload',
+                        uploadTime: uploadResult.document.upload_timestamp,
+                        documentType: uploadResult.document.file_type,
+                        summary: '',
+                        isSummarized: false,
+                        status: 'pending_review'
+                    };
+                    
+                    // Initialize arrays if they don't exist
+                    if (!userHistory.documents) userHistory.documents = [];
+                    if (!userHistory.documentNotifications) userHistory.documentNotifications = [];
+                    if (!userHistory.pendingDocuments) userHistory.pendingDocuments = [];
+                    
+                    userHistory.documents.push(localDocument);
+                    
+                    // Create local notification
+                    const notification = {
+                        id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        documentId: localDocument.id,
+                        timestamp: new Date().toISOString(),
+                        isRead: false,
+                        isDelivered: false,
+                        message: `Your provider has uploaded a new document: ${localDocument.fileName}`
+                    };
+                    
+                    userHistory.documentNotifications.push(notification);
+                    userHistory.pendingDocuments.push(localDocument.id);
+                    
+                    // Save to localStorage
+                    saveUserHistory();
+                    
+                    console.log('📄 Document added to local userHistory:', localDocument);
+                    console.log('🔔 Local notification created:', notification);
+                }
                 
             } catch (error) {
                 console.error('❌ Document upload error:', error);
@@ -9232,6 +9246,20 @@ What would you like to explore first?`,
                         let response = `📄 **Document Review: ${document.fileName}**\n\n`;
                         response += `**Provider:** ${document.provider}\n`;
                         response += `**Upload Time:** ${new Date(document.uploadTime).toLocaleString()}\n\n`;
+                        
+                        // Try to get full content from backend if available
+                        if (typeof SofiaAPI !== 'undefined' && SofiaAPI.isAuthenticated()) {
+                            try {
+                                console.log('🔄 Fetching full document content from backend...');
+                                const backendContent = await SofiaAPI.getDocumentContent(document.id);
+                                if (backendContent && backendContent.extractedText) {
+                                    document.content = backendContent.extractedText;
+                                    console.log('✅ Backend content fetched:', backendContent.extractedText.length, 'characters');
+                                }
+                            } catch (error) {
+                                console.log('⚠️ Could not fetch backend content, using local:', error.message);
+                            }
+                        }
                         
                         if (document.summary && document.isSummarized) {
                             response += `**Document Summary:**\n${document.summary}\n\n`;

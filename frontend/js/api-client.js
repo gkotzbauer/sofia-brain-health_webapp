@@ -198,6 +198,74 @@ const SofiaAPI = (function() {
             }
         },
 
+        // ============= DOCUMENT MANAGEMENT METHODS =============
+        
+        // Upload and process a document
+        async uploadDocument(file) {
+            try {
+                const formData = new FormData();
+                formData.append('document', file);
+                
+                const options = {
+                    method: 'POST',
+                    headers: {}
+                };
+                
+                if (authToken) {
+                    options.headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                // Remove Content-Type header for FormData
+                delete options.headers['Content-Type'];
+                
+                const response = await fetch(`${API_BASE_URL}/documents/upload`, {
+                    ...options,
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Document upload failed: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('Document upload failed:', error);
+                throw error;
+            }
+        },
+        
+        // Get document content by ID
+        async getDocumentContent(documentId) {
+            try {
+                return await apiCall(`/documents/content/${documentId}`);
+            } catch (error) {
+                console.error('Failed to fetch document content:', error);
+                throw error;
+            }
+        },
+        
+        // Get pending document notifications for user
+        async getDocumentNotifications(userId) {
+            try {
+                return await apiCall(`/documents/notifications/${userId}`);
+            } catch (error) {
+                console.error('Failed to fetch document notifications:', error);
+                throw error;
+            }
+        },
+        
+        // Mark document notification as delivered
+        async markNotificationDelivered(notificationId) {
+            try {
+                return await apiCall(`/documents/notifications/${notificationId}/delivered`, 'PUT');
+            } catch (error) {
+                console.error('Failed to mark notification as delivered:', error);
+                throw error;
+            }
+        },
+        
+        // ============= END DOCUMENT MANAGEMENT METHODS =============
+
         // Create goal
         async createGoal(goalData) {
             try {
