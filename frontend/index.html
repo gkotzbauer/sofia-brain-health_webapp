@@ -9241,6 +9241,62 @@ Would you like to:`,
             // Update session risk assessment periodically
             updateSessionRiskAssessment();
             
+            // Handle action plan requests based on About Me profile
+            if (lowerMessage.includes('action plan') || lowerMessage.includes('give me a plan') || lowerMessage.includes('create a plan') || lowerMessage.includes('based on my about me')) {
+                console.log('🎯 User requesting action plan based on About Me profile');
+                
+                // Check if user has About Me data
+                if (!userHistory.aboutMe || !userHistory.aboutMe.bestLifeElements || userHistory.aboutMe.bestLifeElements.length === 0) {
+                    showBotMessage("I'd love to create an action plan for you! First, let's explore what matters most to you in your About Me profile. This will help me create a plan that's truly aligned with your values and concerns.\n\nWould you like to start with your About Me profile?", [
+                        "→ Yes, let's explore what matters to me",
+                        "→ I already have an About Me profile",
+                        "→ Continue with my current conversation"
+                    ]);
+                    return;
+                }
+                
+                // Generate personalized action plan based on About Me data
+                const actionPlan = generatePersonalizedActionPlan();
+                
+                showBotMessage(actionPlan, [
+                    "→ Refine this action plan",
+                    "→ Add more specific goals",
+                    "→ Continue with my current conversation",
+                    "→ Update my journal"
+                ]);
+                
+                currentPhase = "action_plan_review";
+                return;
+            }
+            
+            // Handle "Create action plans for my concerns" button
+            if (lowerMessage.includes('create action plans for my concerns')) {
+                console.log('🎯 User clicked "Create action plans for my concerns" button');
+                
+                // Check if user has About Me data
+                if (!userHistory.aboutMe || !userHistory.aboutMe.bestLifeElements || userHistory.aboutMe.bestLifeElements.length === 0) {
+                    showBotMessage("I'd love to create an action plan for you! First, let's explore what matters most to you in your About Me profile. This will help me create a plan that's truly aligned with your values and concerns.\n\nWould you like to start with your About Me profile?", [
+                        "→ Yes, let's explore what matters to me",
+                        "→ I already have an About Me profile",
+                        "→ Continue with my current conversation"
+                    ]);
+                    return;
+                }
+                
+                // Generate personalized action plan based on About Me data
+                const actionPlan = generatePersonalizedActionPlan();
+                
+                showBotMessage(actionPlan, [
+                    "→ Refine this action plan",
+                    "→ Add more specific goals",
+                    "→ Continue with my current conversation",
+                    "→ Update my journal"
+                ]);
+                
+                currentPhase = "action_plan_review";
+                return;
+            }
+            
             // Document upload follow-up handling
             if (currentPhase === "document_followup" || currentPhase === "health_followup") {
                 handleDocumentFollowup(message);
@@ -9695,34 +9751,6 @@ What would you like to explore first?`,
                     "→ Update my journal"
                 ]);
                 currentPhase = "document_search_prompt";
-                return;
-            }
-            
-            // Handle action plan requests based on About Me profile
-            if (lowerMessage.includes('action plan') || lowerMessage.includes('give me a plan') || lowerMessage.includes('create a plan') || lowerMessage.includes('based on my about me')) {
-                console.log('🎯 User requesting action plan based on About Me profile');
-                
-                // Check if user has About Me data
-                if (!userHistory.aboutMe || !userHistory.aboutMe.bestLifeElements || userHistory.aboutMe.bestLifeElements.length === 0) {
-                    showBotMessage("I'd love to create an action plan for you! First, let's explore what matters most to you in your About Me profile. This will help me create a plan that's truly aligned with your values and concerns.\n\nWould you like to start with your About Me profile?", [
-                        "→ Yes, let's explore what matters to me",
-                        "→ I already have an About Me profile",
-                        "→ Continue with my current conversation"
-                    ]);
-                    return;
-                }
-                
-                // Generate personalized action plan based on About Me data
-                const actionPlan = generatePersonalizedActionPlan();
-                
-                showBotMessage(actionPlan, [
-                    "→ Refine this action plan",
-                    "→ Add more specific goals",
-                    "→ Continue with my current conversation",
-                    "→ Update my journal"
-                ]);
-                
-                currentPhase = "action_plan_review";
                 return;
             }
 
