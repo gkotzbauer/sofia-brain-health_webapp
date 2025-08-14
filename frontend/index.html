@@ -1281,6 +1281,23 @@
                         <div id="documentTestContent"></div>
                     </div>
                 </div>
+
+                <!-- Value Alignment Dashboard (NEW) -->
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                    <h3 style="margin-bottom: 15px; color: #333;">🎯 Value Alignment Dashboard</h3>
+                    <p style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                        Monitor how well our conversations align with what matters most to you
+                    </p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                        <button class="memory-action-btn" onclick="showValueAlignmentStats()" style="background: #ff6b6b; color: white; border-color: #ff6b6b;">📊 View Alignment Stats</button>
+                        <button class="memory-action-btn" onclick="showValueAlignmentLog()" style="background: #51cf66; color: white; border-color: #51cf66;">📝 View Alignment Log</button>
+                        <button class="memory-action-btn" onclick="exportValueAlignmentData()" style="background: #667eea; color: white; border-color: #667eea;">📥 Export Data</button>
+                    </div>
+                    <div id="valueAlignmentResults" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px; display: none;">
+                        <h4 style="margin-top: 0; color: #333;">Value Alignment Results:</h4>
+                        <div id="valueAlignmentContent"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -4663,6 +4680,167 @@ Would you like me to build a brain health chapter from this information, or woul
         
         // ============= END DOCUMENT TESTING FUNCTIONS =============
         
+        // ============= VALUE ALIGNMENT FUNCTIONS =============
+        
+        // Function to show value alignment statistics
+        function showValueAlignmentStats() {
+            if (!window.valueAlignmentManager) {
+                alert('Value Alignment Manager not available. Please refresh the page.');
+                return;
+            }
+            
+            const stats = window.valueAlignmentManager.getAlignmentStats();
+            const results = document.getElementById('valueAlignmentResults');
+            const content = document.getElementById('valueAlignmentContent');
+            
+            if (results && content) {
+                content.innerHTML = `
+                    <div style="margin-bottom: 20px;">
+                        <h5 style="color: #333; margin-bottom: 10px;">📊 Alignment Statistics</h5>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #e0e0e0;">
+                                <div style="font-size: 24px; font-weight: bold; color: #667eea;">${stats.totalChecks}</div>
+                                <div style="font-size: 12px; color: #666;">Total Checks</div>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #e0e0e0;">
+                                <div style="font-size: 24px; font-weight: bold; color: #51cf66;">${stats.averageScore}</div>
+                                <div style="font-size: 12px; color: #666;">Avg Score</div>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #e0e0e0;">
+                                <div style="font-size: 24px; font-weight: bold; color: #ff6b6b;">${stats.alignmentRate}%</div>
+                                <div style="font-size: 12px; color: #666;">Alignment Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${stats.topRecommendations.length > 0 ? `
+                        <div style="margin-bottom: 20px;">
+                            <h5 style="color: #333; margin-bottom: 10px;">💡 Top Recommendations</h5>
+                            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                                ${stats.topRecommendations.map(rec => `
+                                    <div style="margin-bottom: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                                        <strong>${rec.recommendation}</strong>
+                                        <span style="float: right; color: #666; font-size: 12px;">${rec.count} times</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div style="font-size: 12px; color: #666;">
+                        <strong>Note:</strong> These statistics show how well our conversations align with your stated values, concerns, and goals from your About Me profile.
+                    </div>
+                `;
+                
+                results.style.display = 'block';
+            }
+        }
+        
+        // Function to show value alignment log
+        function showValueAlignmentLog() {
+            if (!window.valueAlignmentManager) {
+                alert('Value Alignment Manager not available. Please refresh the page.');
+                return;
+            }
+            
+            const results = document.getElementById('valueAlignmentResults');
+            const content = document.getElementById('valueAlignmentContent');
+            
+            if (results && content) {
+                const log = window.valueAlignmentManager.adherenceLog;
+                
+                if (log.length === 0) {
+                    content.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: #666;">
+                            <p>📝 No alignment data available yet.</p>
+                            <p>Start having conversations to see how well they align with your values!</p>
+                        </div>
+                    `;
+                } else {
+                    const recentLog = log.slice(-10); // Show last 10 entries
+                    
+                    content.innerHTML = `
+                        <h5 style="color: #333; margin-bottom: 15px;">📝 Recent Alignment Log (Last 10 Entries)</h5>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            ${recentLog.map(entry => `
+                                <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e0e0e0;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                        <span style="font-weight: bold; color: #333;">Score: ${entry.alignmentScore}</span>
+                                        <span style="font-size: 12px; color: #666;">${new Date(entry.timestamp).toLocaleString()}</span>
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 8px;">
+                                        <strong>User Input:</strong> "${entry.userInput.substring(0, 100)}${entry.userInput.length > 100 ? '...' : ''}"
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 8px;">
+                                        <strong>AI Response:</strong> "${entry.aiResponse.substring(0, 100)}${entry.aiResponse.length > 100 ? '...' : ''}"
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 8px;">
+                                        <strong>Phase:</strong> ${entry.conversationPhase}
+                                    </div>
+                                    
+                                    ${entry.valueMatches.length > 0 ? `
+                                        <div style="margin-bottom: 8px;">
+                                            <strong>✅ Value Matches:</strong> ${entry.valueMatches.length}
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${entry.concernMatches.length > 0 ? `
+                                        <div style="margin-bottom: 8px;">
+                                            <strong>✅ Concern Matches:</strong> ${entry.valueMatches.length}
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${entry.misalignments.length > 0 ? `
+                                        <div style="margin-bottom: 8px;">
+                                            <strong>⚠️ Misalignments:</strong> ${entry.misalignments.length}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                
+                results.style.display = 'block';
+            }
+        }
+        
+        // Function to export value alignment data
+        function exportValueAlignmentData() {
+            if (!window.valueAlignmentManager) {
+                alert('Value Alignment Manager not available. Please refresh the page.');
+                return;
+            }
+            
+            const stats = window.valueAlignmentManager.getAlignmentStats();
+            const log = window.valueAlignmentManager.adherenceLog;
+            
+            const exportData = {
+                exportDate: new Date().toISOString(),
+                statistics: stats,
+                detailedLog: log,
+                userProfile: window.valueAlignmentManager.getConversationContext()
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `value-alignment-data-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            
+            console.log('📥 Value alignment data exported');
+        }
+        
+        // ============= END VALUE ALIGNMENT FUNCTIONS =============
+        
         // ============= DOCUMENT UPLOAD HANDLER =============
         
         // New document upload handler for document management system
@@ -5122,8 +5300,15 @@ Would you like me to build a brain health chapter from this information, or woul
                     // Check if About Me is complete
                     isAboutMeComplete = userHistory.aboutMe.profileCompleteness > 0;
                     
+                    // Initialize Value Alignment Manager with loaded user data
+                    if (typeof ValueAlignmentManager !== 'undefined' && !window.valueAlignmentManager) {
+                        window.valueAlignmentManager = new ValueAlignmentManager();
+                        window.valueAlignmentManager.initialize(userHistory);
+                        console.log('🎯 Value Alignment Manager initialized with user data');
+                    }
+                    
                     console.log('User history loaded and migrated successfully');
-                    return true;
+                    return true
                 } catch (error) {
                     console.error('Error loading user history:', error);
                     // If there's an error, start fresh
@@ -7395,6 +7580,28 @@ To start, may I know your name?`
                 }
                 
                 scrollToBottom();
+                
+                // Check value alignment if Value Alignment Manager is available
+                if (window.valueAlignmentManager && typeof window.valueAlignmentManager.checkValueAlignment === 'function') {
+                    // Get the last user message for context
+                    const lastUserMessage = conversationLog.length > 0 ? 
+                        conversationLog.filter(log => log.type === 'user').pop()?.message : '';
+                    
+                    if (lastUserMessage) {
+                        const alignment = window.valueAlignmentManager.checkValueAlignment(
+                            lastUserMessage, 
+                            message, 
+                            currentPhase || 'general'
+                        );
+                        
+                        // Log alignment results for monitoring
+                        console.log('🎯 Message Value Alignment:', {
+                            score: alignment.alignmentScore,
+                            matches: alignment.valueMatches.length + alignment.considerMatches.length,
+                            misalignments: alignment.misalignments.length
+                        });
+                    }
+                }
                 
                 conversationLog.push({
                     type: 'bot',
@@ -11778,6 +11985,8 @@ Understanding your specific needs will help me provide the most relevant strateg
     <script src="js/config.js"></script>
     <!-- API Integration - Load this file for full backend functionality -->
     <script src="js/api-client.js"></script>
+    <!-- Value Alignment Manager - Ensures conversations focus on what matters most to users -->
+    <script src="js/value-alignment-manager.js"></script>
     <!-- Optional: PDF.js for PDF document support -->
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script> -->
 </body>

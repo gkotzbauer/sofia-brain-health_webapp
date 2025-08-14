@@ -27,8 +27,7 @@ const goalRoutes = require('./routes/goals');
 const chapterRoutes = require('./routes/chapters');
 const adminRoutes = require('./routes/admin');
 
-// Import routes
-const documentRoutes = require('./routes/documents');
+
 
 // Initialize Express app
 const app = express();
