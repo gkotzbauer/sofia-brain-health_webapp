@@ -10,6 +10,7 @@ services:
     runtime: node
     plan: free
     buildCommand: cd backend && npm install
+    preDeployCommand: cd backend && npm run migrate
     startCommand: cd backend && node server.js
     envVars:
       - key: NODE_ENV
@@ -22,6 +23,10 @@ services:
         generateValue: true
       - key: ENCRYPTION_KEY
         generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CLAUDE_MODEL
+        value: claude-sonnet-4-5
       - key: CORS_ORIGIN
         value: https://sofia-frontend.onrender.com
       - key: PORT
@@ -32,8 +37,11 @@ services:
     name: sofia-frontend
     runtime: static
     # NO PLAN FIELD FOR STATIC SITES - they're always free
-    buildCommand: echo "No build needed"
-    staticPublishPath: ./frontend
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://sofia-backend.onrender.com/api
     routes:
       - type: rewrite
         source: /*

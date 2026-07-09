@@ -1,131 +1,99 @@
 # Sofia Brain Health Companion
 
-A comprehensive web application designed to support brain health through personalized storytelling, goal setting, and progress tracking.
+A Cognitive Care Companion for aging adults: a Claude-powered conversational
+guide, grounded in `sofia-conversation-methodology.md`, that helps people
+build the knowledge and habits they need to live their best life -- alongside
+story-chapter journaling, goal setting with a confidence gate, progress
+visualization, document sharing, and a real safety/escalation pipeline.
 
-## 🚀 Live Demo
-
-- **Backend API**: [Your Render App URL]
-- **Frontend**: [Your Frontend URL]
-
-## ✨ Features
-
-### 🧠 Brain Health Support
-- Personalized story creation and journaling
-- Goal setting and progress tracking
-- Safety event monitoring and intervention tracking
-- Educational content and resources
-
-### 💻 Technical Features
-- **Backend**: Node.js + Express + PostgreSQL
-- **Frontend**: Modern HTML5 + CSS3 + JavaScript
-- **Authentication**: JWT-based secure authentication
-- **Offline Support**: Local storage with sync capabilities
-- **Responsive Design**: Works on all devices
-
-### 🔒 Security & Compliance
-- HIPAA-compliant audit logging
-- Encrypted data transmission
-- Secure authentication
-- Rate limiting and CORS protection
-
-## 🏗️ Architecture
+## Architecture
 
 ```
-├── backend/           # Node.js API server
-│   ├── middleware/    # Authentication, audit, error handling
-│   ├── routes/        # API endpoints
-│   ├── utils/         # Helper functions
-│   └── server.js      # Main server file
-├── frontend/          # Web application
-│   ├── js/           # JavaScript modules
-│   ├── index.html    # Main application
-│   └── config.js     # Configuration
-└── database/          # Database schema
+frontend/    Vite + React + TypeScript SPA
+backend/     Node.js + Express + PostgreSQL API, including the Claude
+             chat-orchestration endpoint (backend/routes/chat.js)
+database/    Schema + migrations (database/migrations/)
 ```
 
-## 🚀 Quick Start
+- **Conversation engine**: `backend/routes/chat.js` builds a system prompt
+  per turn (see `backend/utils/systemPrompt.js`) from the methodology doc,
+  the user's live profile/goals/story chapters/documents, and a lightweight
+  per-session conversation-state object -- then calls the Claude API via
+  tool-use so one response returns both Sofia's reply and structured state
+  (CARE phase, education tier, adaptive pattern, pivots, a safety
+  assessment, and any goal/chapter the user is proposing to save).
+- **Safety pipeline**: every message is checked by a server-side keyword
+  pre-filter (`backend/utils/safetyKeywords.js`) *and* the model's own
+  safety assessment; either one flags a concern, whichever is more severe
+  wins. Confirmed events are recorded and, at high/critical severity, raise
+  a real clinical alert (`backend/utils/clinicalAlerts.js`) -- the UI never
+  claims a clinician was notified unless that actually happened.
+- **Auth & authorization**: real email+password accounts (bcrypt), JWT
+  sessions, and roles (`user` / `clinician` / `admin`) enforced via
+  `backend/middleware/rbac.js`.
+- **PHI handling**: PHI-bearing fields (About Me concerns/values, goals,
+  story chapters, safety event context, feedback, conversation transcripts,
+  uploaded-document text) are encrypted at the application layer
+  (`backend/utils/phiCrypto.js`) before they reach Postgres, and mutating
+  requests are audit-logged.
 
-### Prerequisites
-- Node.js 16+
-- PostgreSQL 12+
-- Modern web browser
+This is a security-conscious prototype, not a certified HIPAA-compliant
+production system -- there's no BAA, legal review, or third-party audit
+behind it.
 
-### Backend Setup
+## Quick start
+
+### Backend
+
 ```bash
 cd backend
 npm install
-# Set environment variables
-npm start
+cp .env.example .env   # set DATABASE_URL, JWT_SECRET, ENCRYPTION_KEY, ANTHROPIC_API_KEY
+npm run migrate        # applies database/schema.sql + database/migrations/*.sql
+npm run dev
 ```
 
-### Frontend Setup
-```bash
-cd frontend
-# Open index.html in a browser
-# Or deploy to any static hosting service
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-```bash
-DATABASE_URL=postgresql://user:pass@host:port/db
-JWT_SECRET=your-secret-key
-NODE_ENV=production
-CORS_ORIGIN=https://your-frontend-domain.com
-```
-
-### Frontend Configuration
-Edit `frontend/js/config.js` to set your API URL and preferences.
-
-## 📱 Usage
-
-1. **Authentication**: Create an account or login
-2. **Profile Setup**: Complete your "About Me" profile
-3. **Story Creation**: Write chapters about your journey
-4. **Goal Setting**: Define and track personal goals
-5. **Progress Monitoring**: View your progress over time
-6. **Safety Support**: Log and track safety events
-
-## 🚀 Deployment
-
-### Backend (Render)
-- ✅ Already deployed and working
-- Uses Render's PostgreSQL service
-- Automatic deployments from GitHub
+`JWT_SECRET` and `ENCRYPTION_KEY` are required -- the server refuses to start
+without them. `ANTHROPIC_API_KEY` is required for `/api/chat` to work (other
+endpoints still function without it).
 
 ### Frontend
-- Deploy to any static hosting service
-- Update API configuration
-- Test integration with backend
 
-## 🤝 Contributing
+```bash
+cd frontend
+npm install
+cp .env.example .env   # set VITE_API_BASE_URL to your backend
+npm run dev
+```
+
+See `frontend/DEPLOYMENT.md` and `backend/DEPLOYMENT.md` for deployment
+details, and `render.yaml` for the reference Render configuration.
+
+## Usage
+
+1. **Register/sign in** with an email and password.
+2. **Talk with Sofia** -- a real, Claude-backed conversation grounded in the
+   methodology doc, not a scripted decision tree.
+3. **About Me** -- share what matters most (best-life elements, concerns,
+   confidence) so Sofia's conversation stays grounded in your real profile.
+4. **Quests (goals)** -- set goals through a confidence-gated flow: below a
+   confidence of 7, Sofia asks what would help before saving; at 7+, she
+   asks for a first step.
+5. **Story** -- write chapters with an emotional-arc picker.
+6. **Documents** -- upload PDFs/text so Sofia can refer to them in
+   conversation.
+7. **Clinician view** (`clinician`/`admin` roles only) -- see and
+   acknowledge pending safety alerts.
+
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Run `npm run typecheck` (frontend) and smoke-test the affected flow
 5. Submit a pull request
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
-
-For support or questions:
-- Check the deployment guides in each directory
-- Review the configuration files
-- Test the API endpoints
-
-## 🔄 Recent Updates
-
-- ✅ Fixed middleware export/import issues
-- ✅ Added root route for API documentation
-- ✅ Backend successfully deployed to Render
-- ✅ Frontend ready for deployment
-- ✅ Complete API integration working
-
----
-
-**Sofia Brain Health Companion** - Supporting your mental health journey through technology.
+This project is licensed under the MIT License - see the LICENSE file for
+details.

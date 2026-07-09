@@ -34,7 +34,7 @@ const auditMiddleware = (actionType) => {
             `INSERT INTO audit_log (user_id, action, resource_type, resource_id, ip_address, user_agent, metadata)
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [
-              req.user?.userId || null,
+              req.user?.id || null,
               actionType,
               req.method + ' ' + req.path,
               req.params.id || null,

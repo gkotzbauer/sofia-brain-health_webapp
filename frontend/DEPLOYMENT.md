@@ -1,78 +1,68 @@
 # Sofia Frontend Deployment Guide
 
-## Quick Setup
+The frontend is a Vite + React + TypeScript single-page app. It builds to a
+static bundle (`dist/`) that can be hosted anywhere that serves static files.
 
-1. **Update API Configuration**: Edit `js/config.js` and replace `your-render-app-name` with your actual Render app name
-2. **Deploy to any static hosting service** (GitHub Pages, Netlify, Vercel, etc.)
+## Local development
+
+```bash
+cd frontend
+npm install
+cp .env.example .env   # set VITE_API_BASE_URL to your backend
+npm run dev
+```
 
 ## Configuration
 
-### API URL Setup
+The only required environment variable is `VITE_API_BASE_URL`, read at
+**build time** by Vite (not at runtime) -- see `.env.example`.
 
-In `js/config.js`, update the API_BASE_URL:
-
-```javascript
-const SofiaConfig = {
-    API_BASE_URL: 'https://your-actual-app-name.onrender.com/api',
-    // ... other config
-};
+```
+VITE_API_BASE_URL=https://your-backend.onrender.com/api
 ```
 
-### Environment Detection
+Because it's baked in at build time, each deployment target (local, staging,
+production) needs its own build with the right `VITE_API_BASE_URL` set.
 
-The app automatically detects:
-- **Localhost**: Uses `http://localhost:10000/api` for development
-- **Production**: Uses the URL from `SofiaConfig.API_BASE_URL`
+## Building for production
 
-## Deployment Options
+```bash
+cd frontend
+npm install
+npm run build
+```
 
-### Option 1: GitHub Pages (Free)
-1. Push your frontend code to a GitHub repository
-2. Enable GitHub Pages in repository settings
-3. Set source to main branch or /docs folder
+This produces a static bundle in `frontend/dist/`. Serve that directory as
+your static site root; the app is a client-side-routed SPA, so your host
+needs to rewrite unknown paths back to `index.html` (see `render.yaml`'s
+`routes` config for the pattern).
 
-### Option 2: Netlify (Free)
-1. Connect your GitHub repository to Netlify
-2. Set build command: (none needed - static site)
-3. Set publish directory: `frontend/`
+## Deployment options
 
-### Option 3: Vercel (Free)
-1. Connect your GitHub repository to Vercel
-2. Vercel will auto-detect it's a static site
-3. Deploy automatically
+Any static host works, as long as it runs the build step above and serves
+`dist/` with an SPA rewrite rule:
 
-### Option 4: Render Static Site (Free)
-1. Create a new Static Site service in Render
-2. Connect your GitHub repository
-3. Set build command: (none needed)
-4. Set publish directory: `frontend/`
+- **Render** (see `render.yaml` at the repo root) -- already configured with
+  `buildCommand: cd frontend && npm install && npm run build` and
+  `staticPublishPath: ./frontend/dist`.
+- **Netlify / Vercel** -- set build command to `npm run build`, publish
+  directory to `dist`, base directory to `frontend`.
+- **GitHub Pages** -- build locally or in CI, then publish the `dist/`
+  contents.
 
 ## Testing
 
-1. **Local Testing**: Open `index.html` in a browser
-2. **API Testing**: Ensure your backend is running on Render
-3. **Integration Testing**: Test authentication and data flow
-
-## Features
-
-- ✅ **Responsive Design**: Works on desktop, tablet, and mobile
-- ✅ **Offline Support**: Caches data locally when offline
-- ✅ **API Integration**: Full backend connectivity
-- ✅ **Modern UI**: Clean, accessible interface
-- ✅ **Cross-browser**: Works in all modern browsers
+1. **Local**: `npm run dev`, then exercise auth, chat, goals, story, and
+   document upload against a running backend.
+2. **Type safety**: `npm run typecheck` (also runs as part of `npm run build`).
+3. **Production build**: `npm run build && npm run preview` to sanity-check
+   the actual production bundle before deploying.
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **CORS Errors**: Ensure your Render backend has proper CORS configuration
-2. **API Connection**: Verify the API_BASE_URL is correct
-3. **Authentication**: Check that JWT tokens are being sent properly
-
-### Debug Mode
-
-Enable debug mode in `config.js`:
-```javascript
-DEBUG_MODE: true,
-LOG_LEVEL: 'debug'
-``` 
+- **CORS errors**: confirm the backend's `CORS_ORIGIN` matches the frontend's
+  deployed origin.
+- **401s everywhere**: check `VITE_API_BASE_URL` was set correctly at build
+  time -- changing it requires a rebuild, not just a redeploy of old assets.
+- **Blank page on a deep link** (e.g. refreshing `/goals`): the host isn't
+  rewriting unknown paths to `index.html` -- see the SPA rewrite note above.

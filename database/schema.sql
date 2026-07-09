@@ -21,7 +21,8 @@ CREATE TABLE users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- About Me Profile (encrypted for PHI)
+-- About Me Profile (PHI columns are encrypted at the application layer as of
+-- migrations/003_phi_encryption.sql -- see backend/utils/phiCrypto.js)
 CREATE TABLE about_me_profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
