@@ -4,7 +4,17 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 const pdfParse = require('pdf-parse');
-const { encryptJSON, decryptJSON } = require('../utils/phiCrypto');
+const { encryptJSON, decryptJSON, encryptField, decryptField } = require('../utils/phiCrypto');
+
+function decryptHistoryRow(row) {
+  if (!row) return row;
+  return {
+    ...row,
+    variable_value: decryptField(row.variable_value),
+    previous_value: decryptField(row.previous_value),
+    source_details: decryptJSON(row.source_details)
+  };
+}
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -92,12 +102,12 @@ router.post('/profile-history', async (req, res) => {
       `INSERT INTO profile_variable_history
        (user_id, variable_name, variable_value, previous_value, source, source_details)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [userId, variableName, variableValue, previousValue, source, JSON.stringify(sourceDetails)]
+      [userId, variableName, encryptField(variableValue), encryptField(previousValue), source, encryptJSON(sourceDetails)]
     );
 
     await req.auditLog(userId, 'PROFILE_VARIABLE_UPDATED', 'profile_variable_history', result.rows[0].id, req);
 
-    res.json(result.rows[0]);
+    res.json(decryptHistoryRow(result.rows[0]));
   } catch (error) {
     req.logger.error('Profile history tracking error:', error);
     res.status(500).json({ error: 'Failed to track profile change' });
@@ -135,7 +145,7 @@ router.get('/profile-history', async (req, res) => {
 
     await req.auditLog(userId, 'PROFILE_HISTORY_VIEWED', 'profile_variable_history', null, req);
 
-    res.json(result.rows);
+    res.json(result.rows.map(decryptHistoryRow));
   } catch (error) {
     req.logger.error('Profile history fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch profile history' });
@@ -228,9 +238,9 @@ router.post('/upload', upload.single('document'), async (req, res) => {
       [
         userId,
         'document_notification',
-        `New document uploaded: ${filename}`,
+        encryptField(`New document uploaded: ${filename}`),
         'document',
-        JSON.stringify({
+        encryptJSON({
           documentId: result.rows[0].id,
           filename: filename,
           documentType: documentType,
@@ -244,7 +254,7 @@ router.post('/upload', upload.single('document'), async (req, res) => {
     res.json({
       success: true,
       document: { ...result.rows[0], metadata: decryptJSON(result.rows[0].metadata) },
-      notification: notificationResult.rows[0],
+      notification: decryptHistoryRow(notificationResult.rows[0]),
       extractedText: extractedText.substring(0, 500) + (extractedText.length > 500 ? '...' : ''),
       message: `Document uploaded and processed successfully. ${extractedText.length} characters extracted.`
     });
@@ -305,7 +315,7 @@ router.get('/notifications', async (req, res) => {
       [userId]
     );
 
-    res.json(result.rows);
+    res.json(result.rows.map(decryptHistoryRow));
   } catch (error) {
     req.logger.error('Document notifications fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch document notifications' });
@@ -318,12 +328,31 @@ router.put('/notifications/:notificationId/delivered', async (req, res) => {
     const userId = req.user.id;
     const { notificationId } = req.params;
 
+    // source_details is encrypted, so it can no longer be updated with an
+    // in-SQL JSONB merge (`source_details || '{...}'::jsonb`) -- fetch,
+    // decrypt, merge, re-encrypt, then write back as an ordinary column set.
+    // (The prior JSONB-merge SQL also had a latent bug: `$1` was embedded
+    // inside a quoted JSON string literal, so parameter substitution never
+    // actually applied there -- the literal text "$1" was being stored
+    // instead of the real timestamp.)
+    const existing = await req.pool.query(
+      'SELECT source_details FROM profile_variable_history WHERE id = $1 AND user_id = $2',
+      [notificationId, userId]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+    const mergedSourceDetails = {
+      ...(decryptJSON(existing.rows[0].source_details) || {}),
+      delivered: true,
+      deliveredAt: new Date().toISOString()
+    };
+
     const result = await req.pool.query(
       `UPDATE profile_variable_history
-       SET is_active = false,
-           source_details = COALESCE(source_details, '{}'::jsonb) || '{"delivered": true, "deliveredAt": $1}'::jsonb
+       SET is_active = false, source_details = $1
        WHERE id = $2 AND user_id = $3 RETURNING *`,
-      [new Date().toISOString(), notificationId, userId]
+      [encryptJSON(mergedSourceDetails), notificationId, userId]
     );
 
     if (result.rows.length === 0) {
@@ -332,7 +361,7 @@ router.put('/notifications/:notificationId/delivered', async (req, res) => {
 
     await req.auditLog(userId, 'NOTIFICATION_DELIVERED', 'profile_variable_history', notificationId, req);
 
-    res.json(result.rows[0]);
+    res.json(decryptHistoryRow(result.rows[0]));
   } catch (error) {
     req.logger.error('Notification delivery update error:', error);
     res.status(500).json({ error: 'Failed to update notification status' });

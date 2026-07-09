@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { calculateCompleteness } = require('../utils/helpers');
-const { encryptJSON, decryptJSON, decryptField } = require('../utils/phiCrypto');
+const { encryptJSON, decryptJSON, encryptField, decryptField } = require('../utils/phiCrypto');
 
 function decryptAboutMe(row) {
   if (!row) return row;
@@ -105,10 +105,10 @@ router.put('/about-me', async (req, res) => {
           [
             userId,
             'bestLifeElements',
-            JSON.stringify(bestLifeElements),
-            JSON.stringify(currentBestLifeElements),
+            encryptJSON(bestLifeElements),
+            encryptJSON(currentBestLifeElements),
             'manual',
-            JSON.stringify({ action: 'about_me_update', timestamp: new Date().toISOString() })
+            encryptJSON({ action: 'about_me_update', timestamp: new Date().toISOString() })
           ]
         );
       }
@@ -122,10 +122,10 @@ router.put('/about-me', async (req, res) => {
           [
             userId,
             'concerns',
-            JSON.stringify(concerns),
-            JSON.stringify(currentConcerns),
+            encryptJSON(concerns),
+            encryptJSON(currentConcerns),
             'manual',
-            JSON.stringify({ action: 'about_me_update', timestamp: new Date().toISOString() })
+            encryptJSON({ action: 'about_me_update', timestamp: new Date().toISOString() })
           ]
         );
       }
@@ -139,10 +139,10 @@ router.put('/about-me', async (req, res) => {
           [
             userId,
             'confidenceLevel',
-            confidenceLevel,
-            current.confidence_level,
+            encryptField(confidenceLevel),
+            encryptField(current.confidence_level),
             'manual',
-            JSON.stringify({ action: 'about_me_update', timestamp: new Date().toISOString() })
+            encryptJSON({ action: 'about_me_update', timestamp: new Date().toISOString() })
           ]
         );
       }
