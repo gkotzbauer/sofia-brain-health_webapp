@@ -1,4 +1,5 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const router = express.Router();
 const { calculateCompleteness } = require('../utils/helpers');
 const { encryptJSON, decryptJSON, encryptField, decryptField } = require('../utils/phiCrypto');
@@ -68,10 +69,27 @@ router.get('/profile', async (req, res) => {
         choices: decryptField(chapter.choices),
         learning: decryptField(chapter.learning)
       })),
-      goals: goalsResult.rows.map((goal) => ({ ...goal, goal: decryptField(goal.goal) })),
-      concerns: concernsResult.rows,
-      values: valuesResult.rows,
-      educationTopics: educationResult.rows
+      goals: goalsResult.rows.map((goal) => ({
+        ...goal,
+        goal: decryptField(goal.goal),
+        user_note: decryptField(goal.user_note)
+      })),
+      concerns: concernsResult.rows.map((concern) => ({
+        ...concern,
+        concern: decryptField(concern.concern),
+        context: decryptField(concern.context),
+        user_note: decryptField(concern.user_note)
+      })),
+      values: valuesResult.rows.map((value) => ({
+        ...value,
+        value_text: decryptField(value.value_text),
+        user_note: decryptField(value.user_note)
+      })),
+      educationTopics: educationResult.rows.map((topic) => ({
+        ...topic,
+        topic: decryptField(topic.topic),
+        user_note: decryptField(topic.user_note)
+      }))
     });
   } catch (error) {
     req.logger.error('Profile fetch error:', error);
@@ -169,6 +187,48 @@ router.put('/about-me', async (req, res) => {
   } catch (error) {
     req.logger.error('About Me update error:', error);
     res.status(500).json({ error: 'Failed to update About Me profile' });
+  }
+});
+
+// Delete the caller's own account and all associated data. Password-
+// confirmed (not just JWT possession) so a stolen/leaked token alone can't
+// destroy an account. Every PHI-bearing table has an ON DELETE CASCADE (or,
+// for audit_log, ON DELETE SET NULL -- the audit trail intentionally
+// survives account deletion) foreign key to users.id, so deleting the user
+// row is a genuine, complete erasure -- see database/schema.sql. The
+// deletion event itself is audit-logged BEFORE the delete so the record of
+// "this account was deleted" is captured while user_id is still valid.
+router.delete('/me', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { password } = req.body;
+
+    if (typeof password !== 'string' || !password) {
+      return res.status(400).json({ error: 'password is required to confirm account deletion' });
+    }
+
+    const result = await req.pool.query('SELECT password_hash FROM users WHERE id = $1', [userId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    let passwordMatches = false;
+    try {
+      passwordMatches = await bcrypt.compare(password, result.rows[0].password_hash || '');
+    } catch (compareError) {
+      passwordMatches = false;
+    }
+    if (!passwordMatches) {
+      return res.status(401).json({ error: 'Incorrect password' });
+    }
+
+    await req.auditLog(userId, 'ACCOUNT_DELETED', 'users', userId, req);
+    await req.pool.query('DELETE FROM users WHERE id = $1', [userId]);
+
+    res.json({ success: true, message: 'Your account and all associated data have been deleted.' });
+  } catch (error) {
+    req.logger.error('Account deletion error:', error);
+    res.status(500).json({ error: 'Failed to delete account' });
   }
 });
 

@@ -23,6 +23,12 @@ services:
         generateValue: true
       - key: ENCRYPTION_KEY
         generateValue: true
+      - key: LLM_PROVIDER
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: CLAUDE_MODEL

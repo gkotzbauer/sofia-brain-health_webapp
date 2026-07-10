@@ -166,6 +166,31 @@ export interface DocumentUploadResult {
   message: string;
 }
 
+export interface ValueItem {
+  id: string;
+  value_text: string;
+  importance: 'high' | 'medium' | 'low' | string;
+  user_note: string | null;
+  [key: string]: unknown;
+}
+
+export interface ConcernItem {
+  id: string;
+  concern: string;
+  severity: 'high' | 'moderate' | 'low' | string;
+  context: string | null;
+  user_note: string | null;
+  [key: string]: unknown;
+}
+
+export interface EducationTopicItem {
+  id: string;
+  topic: string;
+  engagement: 'high' | 'moderate' | 'low' | string;
+  user_note: string | null;
+  [key: string]: unknown;
+}
+
 export interface ClinicalAlert {
   id: string;
   user_id: string;
@@ -198,6 +223,26 @@ export const api = {
     request<{ user: SofiaUser; aboutMe: AboutMe; storyChapters: StoryChapter[]; goals: Goal[] }>('/users/profile'),
   updateAboutMe: (data: Partial<AboutMe>) =>
     request<AboutMe>('/users/about-me', { method: 'PUT', body: JSON.stringify(data) }),
+  deleteAccount: (password: string) =>
+    request<{ success: boolean; message: string }>('/users/me', { method: 'DELETE', body: JSON.stringify({ password }) }),
+
+  listValues: () => request<ValueItem[]>('/values'),
+  createValue: (data: { valueText: string; importance?: string }) =>
+    request<ValueItem>('/values', { method: 'POST', body: JSON.stringify(data) }),
+  updateValue: (valueId: string, data: Partial<{ valueText: string; importance: string; userNote: string }>) =>
+    request<ValueItem>(`/values/${valueId}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  listConcerns: () => request<ConcernItem[]>('/concerns'),
+  createConcern: (data: { concern: string; severity?: string; context?: string }) =>
+    request<ConcernItem>('/concerns', { method: 'POST', body: JSON.stringify(data) }),
+  updateConcern: (concernId: string, data: Partial<{ concern: string; severity: string; context: string; userNote: string }>) =>
+    request<ConcernItem>(`/concerns/${concernId}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  listEducationTopics: () => request<EducationTopicItem[]>('/education-topics'),
+  createEducationTopic: (data: { topic: string; engagement?: string }) =>
+    request<EducationTopicItem>('/education-topics', { method: 'POST', body: JSON.stringify(data) }),
+  updateEducationTopic: (topicId: string, data: Partial<{ topic: string; engagement: string; userNote: string }>) =>
+    request<EducationTopicItem>(`/education-topics/${topicId}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   listGoals: () => request<Goal[]>('/goals'),
   createGoal: (data: { goal: string; confidence: number; linkedBestLifeElements?: string[] }) =>

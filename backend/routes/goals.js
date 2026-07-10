@@ -4,7 +4,12 @@ const { encryptField, decryptField } = require('../utils/phiCrypto');
 
 function decryptGoal(row) {
   if (!row) return row;
-  return { ...row, goal: decryptField(row.goal) };
+  return { ...row, goal: decryptField(row.goal), user_note: decryptField(row.user_note) };
+}
+
+function decryptProgress(row) {
+  if (!row) return row;
+  return { ...row, progress_note: decryptField(row.progress_note) };
 }
 
 // List goals for the current user
@@ -62,7 +67,7 @@ router.put('/:goalId', async (req, res) => {
            user_note = COALESCE($4, user_note),
            last_edited = CURRENT_TIMESTAMP
        WHERE id = $5 AND user_id = $6 RETURNING *`,
-      [goal ? encryptField(goal) : null, confidence, status, userNote, goalId, userId]
+      [goal ? encryptField(goal) : null, confidence, status, userNote ? encryptField(userNote) : null, goalId, userId]
     );
 
     if (result.rows.length === 0) {
@@ -75,6 +80,29 @@ router.put('/:goalId', async (req, res) => {
   } catch (error) {
     req.logger.error('Goal update error:', error);
     res.status(500).json({ error: 'Failed to update goal' });
+  }
+});
+
+// List progress entries for a goal (ownership-checked)
+router.get('/:goalId/progress', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { goalId } = req.params;
+
+    const owned = await req.pool.query('SELECT id FROM goals WHERE id = $1 AND user_id = $2', [goalId, userId]);
+    if (owned.rows.length === 0) {
+      return res.status(404).json({ error: 'Goal not found' });
+    }
+
+    const result = await req.pool.query(
+      'SELECT * FROM goal_progress WHERE goal_id = $1 ORDER BY progress_date DESC',
+      [goalId]
+    );
+
+    res.json(result.rows.map(decryptProgress));
+  } catch (error) {
+    req.logger.error('Goal progress list error:', error);
+    res.status(500).json({ error: 'Failed to list goal progress' });
   }
 });
 
@@ -93,7 +121,7 @@ router.post('/:goalId/progress', async (req, res) => {
     const result = await req.pool.query(
       `INSERT INTO goal_progress (goal_id, progress_note, confidence_update)
        VALUES ($1, $2, $3) RETURNING *`,
-      [goalId, progressNote, confidenceUpdate]
+      [goalId, encryptField(progressNote), confidenceUpdate]
     );
 
     if (confidenceUpdate) {
@@ -105,7 +133,7 @@ router.post('/:goalId/progress', async (req, res) => {
 
     await req.auditLog(userId, 'GOAL_PROGRESS_RECORDED', 'goal_progress', result.rows[0].id, req);
 
-    res.json(result.rows[0]);
+    res.json(decryptProgress(result.rows[0]));
   } catch (error) {
     req.logger.error('Goal progress error:', error);
     res.status(500).json({ error: 'Failed to record goal progress' });

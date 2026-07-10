@@ -1,6 +1,5 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const Anthropic = require('@anthropic-ai/sdk');
 const router = express.Router();
 
 const { encryptJSON, decryptJSON, decryptField } = require('../utils/phiCrypto');
@@ -8,11 +7,12 @@ const { detectSafetyTriggers, mostSevereTrigger, SEVERITY_RANK } = require('../u
 const { recordSafetyEvent } = require('../utils/safetyEvents');
 const { createClinicalAlert } = require('../utils/clinicalAlerts');
 const { buildSystemPrompt } = require('../utils/systemPrompt');
+const llm = require('../utils/llm');
 
-// How many of the most recent conversation_log entries get sent to Claude.
-// The full transcript is always persisted regardless -- this only bounds
-// per-turn cost/latency, which would otherwise grow linearly with a long
-// conversation. Tunable via env without a code change/redeploy.
+// How many of the most recent conversation_log entries get sent to the
+// model. The full transcript is always persisted regardless -- this only
+// bounds per-turn cost/latency, which would otherwise grow linearly with a
+// long conversation. Tunable via env without a code change/redeploy.
 const MAX_CONTEXT_MESSAGES = parseInt(process.env.CHAT_CONTEXT_MESSAGE_LIMIT, 10) || 30;
 
 // Once a session's context is capped, re-notify a clinician every time the
@@ -21,27 +21,10 @@ const MAX_CONTEXT_MESSAGES = parseInt(process.env.CHAT_CONTEXT_MESSAGE_LIMIT, 10
 // avoiding alert spam.
 const CONTEXT_CAP_REALERT_INTERVAL = parseInt(process.env.CHAT_CONTEXT_CAP_REALERT_INTERVAL, 10) || 50;
 
-// Warm, on-brand copy shown when the Claude call itself fails/times out --
+// Warm, on-brand copy shown when the model call itself fails/times out --
 // the user's message is still saved so nothing is lost, but no model output
 // exists for that turn, so no CARE-phase/safety-assessment update happens.
 const FALLBACK_REPLY = "I'm having trouble connecting right now. Your message wasn't lost -- please try sending it again in a moment.";
-
-// Built once and reused across requests (not per-turn) -- constructed
-// lazily so a missing ANTHROPIC_API_KEY doesn't crash the whole server at
-// require-time; the route handler already 503s before ever calling this if
-// the key is unset. An explicit timeout/retry count replaces undocumented
-// SDK defaults for a synchronous, browser-facing request.
-let anthropicClient = null;
-function getAnthropicClient() {
-  if (!anthropicClient) {
-    anthropicClient = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-      timeout: 20 * 1000,
-      maxRetries: 2
-    });
-  }
-  return anthropicClient;
-}
 
 // Chat calls hit a paid, latency-sensitive external API -- tighter than the
 // global API limiter, but still generous enough for a real conversation.
@@ -53,76 +36,6 @@ const chatLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// One tool call returns both the natural-language reply and the structured
-// conversation-state deltas (see utils/systemPrompt.js for the framework
-// this implements). Enums mirror the DB's safety_trigger_type/risk_level.
-const SOFIA_TURN_TOOL = {
-  name: 'sofia_turn_response',
-  description: "Sofia's next conversational turn, plus structured tracking of CARE phase, education tier, adaptive pattern, any pivot, a safety assessment, and any goal/chapter the user is proposing to save.",
-  input_schema: {
-    type: 'object',
-    properties: {
-      reply: {
-        type: 'string',
-        description: "The only field shown to the user -- Sofia's natural-language reply, in her warm hero's-journey voice."
-      },
-      entry_point: {
-        type: 'string',
-        enum: ['validation', 'strength_based', 'goal_oriented', 'educational']
-      },
-      care_phase: {
-        type: 'string',
-        enum: ['clarify', 'assess', 'relate', 'engage', 'complete']
-      },
-      education_tier: {
-        type: ['string', 'null'],
-        enum: ['micro', 'standard', 'deep_dive', null]
-      },
-      adaptive_pattern: {
-        type: ['string', 'null'],
-        enum: ['anxious', 'information_seeker', 'action_oriented', 'reluctant', null]
-      },
-      pivot: {
-        type: ['object', 'null'],
-        properties: {
-          type: { type: 'string', enum: ['distress', 'direct_question', 'new_concern', 'fatigue'] },
-          note: { type: 'string' }
-        }
-      },
-      safety_assessment: {
-        type: 'object',
-        description: 'Set on every turn, even when nothing is wrong (trigger_type "none", risk_level "low").',
-        properties: {
-          risk_level: { type: 'string', enum: ['low', 'moderate', 'high', 'critical'] },
-          trigger_type: { type: 'string', enum: ['none', 'emergency', 'distress', 'frustration', 'repetition', 'inclusion'] },
-          rationale: { type: 'string' }
-        },
-        required: ['risk_level', 'trigger_type', 'rationale']
-      },
-      proposed_goal: {
-        type: ['object', 'null'],
-        description: 'Only set when proposing to save a new/updated goal -- never assume it is saved.',
-        properties: {
-          text: { type: 'string' },
-          confidence: { type: 'integer', minimum: 1, maximum: 10 }
-        }
-      },
-      proposed_chapter: {
-        type: ['object', 'null'],
-        description: 'Only set when proposing to save a story chapter -- never assume it is saved.',
-        properties: {
-          title: { type: 'string' },
-          moment: { type: 'string' },
-          moodArc: { type: 'array', items: { type: 'string' } },
-          choices: { type: 'string' },
-          learning: { type: 'string' }
-        }
-      }
-    },
-    required: ['reply', 'care_phase', 'safety_assessment']
-  }
-};
-
 router.post('/', chatLimiter, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -132,8 +45,8 @@ router.post('/', chatLimiter, async (req, res) => {
       return res.status(400).json({ error: 'sessionId and a non-empty message are required' });
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      req.logger.error('Chat request received but ANTHROPIC_API_KEY is not configured');
+    if (!llm.isConfigured()) {
+      req.logger.error(`Chat request received but ${llm.missingEnvVar()} is not configured for LLM_PROVIDER=${llm.getProviderName()}`);
       return res.status(503).json({ error: 'The chat companion is not configured on this server yet.' });
     }
 
@@ -173,35 +86,29 @@ router.post('/', chatLimiter, async (req, res) => {
       return { filename: row.filename, extractedText: metadata.extractedText || '' };
     });
 
-    const systemPrompt = buildSystemPrompt({ user: req.user, aboutMe, goals, chapters, documents, state: existingState });
+    const systemBlocks = buildSystemPrompt({ user: req.user, aboutMe, goals, chapters, documents, state: existingState });
 
-    // Only the most recent MAX_CONTEXT_MESSAGES entries go to Claude; the
+    // Only the most recent MAX_CONTEXT_MESSAGES entries go to the model; the
     // full log (including any earlier care-team messages, which are never
     // sent to the model at all -- see the role filter below) stays in the
     // database and in the user's/clinician's view regardless.
     const isContextCapped = existingLog.length > MAX_CONTEXT_MESSAGES;
-    const contextForClaude = isContextCapped ? existingLog.slice(-MAX_CONTEXT_MESSAGES) : existingLog;
+    const contextForLLM = isContextCapped ? existingLog.slice(-MAX_CONTEXT_MESSAGES) : existingLog;
 
-    const anthropicMessages = contextForClaude
+    const llmMessages = contextForLLM
       .filter((turn) => turn.role === 'user' || turn.role === 'assistant')
       .map((turn) => ({ role: turn.role, content: turn.content }));
-    anthropicMessages.push({ role: 'user', content: message });
+    llmMessages.push({ role: 'user', content: message });
 
-    let completion;
+    let turn;
     try {
-      completion = await getAnthropicClient().messages.create({
-        model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-5',
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: anthropicMessages,
-        tools: [SOFIA_TURN_TOOL],
-        tool_choice: { type: 'tool', name: 'sofia_turn_response' }
-      });
+      turn = await llm.getProvider().generateTurn({ systemBlocks, messages: llmMessages });
     } catch (apiError) {
-      req.logger.error('Anthropic API call failed:', apiError);
+      req.logger.error(`${llm.getProviderName()} API call failed:`, apiError);
 
-      // The keyword pre-filter doesn't depend on Claude, so it still runs --
-      // a network/API failure should never silently skip safety detection.
+      // The keyword pre-filter doesn't depend on the model, so it still
+      // runs -- a network/API failure should never silently skip safety
+      // detection.
       const fallbackKeywordTriggers = detectSafetyTriggers(message);
       const fallbackKeywordTrigger = mostSevereTrigger(fallbackKeywordTriggers);
       let fallbackClinicianNotified = false;
@@ -246,13 +153,6 @@ router.post('/', chatLimiter, async (req, res) => {
         }
       });
     }
-
-    const toolUse = completion.content.find((block) => block.type === 'tool_use');
-    if (!toolUse) {
-      req.logger.error('Claude response had no tool_use block');
-      return res.status(502).json({ error: 'The chat companion returned an unexpected response.' });
-    }
-    const turn = toolUse.input;
 
     // Safety corroboration: keyword pre-filter OR the model's own
     // assessment -- whichever is more severe wins, biasing toward

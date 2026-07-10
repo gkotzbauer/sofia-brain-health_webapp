@@ -31,6 +31,9 @@ const safetyRoutes = require('./routes/safety');
 const feedbackRoutes = require('./routes/feedback');
 const goalRoutes = require('./routes/goals');
 const chapterRoutes = require('./routes/chapters');
+const valueRoutes = require('./routes/values');
+const concernRoutes = require('./routes/concerns');
+const educationTopicRoutes = require('./routes/educationTopics');
 const adminRoutes = require('./routes/admin');
 
 // Initialize Express app
@@ -154,6 +157,9 @@ app.get('/', (req, res) => {
       feedback: '/api/feedback/*',
       goals: '/api/goals/*',
       chapters: '/api/story-chapters/*',
+      values: '/api/values/*',
+      concerns: '/api/concerns/*',
+      educationTopics: '/api/education-topics/*',
       admin: '/api/admin/*'
     },
     documentation: 'This is a backend API server. Use the endpoints above to interact with the Sofia Brain Health Companion application.'
@@ -170,6 +176,9 @@ app.use('/api/safety-events', authenticateToken, safetyRoutes);
 app.use('/api/feedback', authenticateToken, feedbackRoutes);
 app.use('/api/goals', authenticateToken, goalRoutes);
 app.use('/api/story-chapters', authenticateToken, chapterRoutes);
+app.use('/api/values', authenticateToken, valueRoutes);
+app.use('/api/concerns', authenticateToken, concernRoutes);
+app.use('/api/education-topics', authenticateToken, educationTopicRoutes);
 app.use('/api/admin', authenticateToken, adminRoutes); // Admin/clinician routes (role-checked per-route)
 
 // Error handling middleware
