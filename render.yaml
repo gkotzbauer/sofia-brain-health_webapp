@@ -37,7 +37,7 @@ services:
       - key: CLAUDE_MODEL
         value: claude-sonnet-4-5
       - key: CORS_ORIGIN
-        value: https://sofia-frontend.onrender.com
+        value: https://sofia-frontend-2448.onrender.com
       - key: PORT
         value: 10000
     healthCheckPath: /api/health
@@ -50,7 +50,7 @@ services:
     staticPublishPath: ./frontend/dist
     envVars:
       - key: VITE_API_BASE_URL
-        value: https://sofia-backend.onrender.com/api
+        value: https://sofia-backend-o6jq.onrender.com/api
     routes:
       - type: rewrite
         source: /*
