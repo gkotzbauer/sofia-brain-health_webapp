@@ -19,6 +19,15 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Shared with routes/documents.js's document-extraction apply endpoint.
+async function createEducationTopic(pool, userId, { topic, engagement }) {
+  const result = await pool.query(
+    `INSERT INTO education_topics (user_id, topic, engagement) VALUES ($1, $2, $3) RETURNING *`,
+    [userId, encryptField(topic), engagement || 'moderate']
+  );
+  return decryptTopic(result.rows[0]);
+}
+
 // Create an education topic
 router.post('/', async (req, res) => {
   try {
@@ -29,14 +38,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'topic is required' });
     }
 
-    const result = await req.pool.query(
-      `INSERT INTO education_topics (user_id, topic, engagement) VALUES ($1, $2, $3) RETURNING *`,
-      [userId, encryptField(topic), engagement || 'moderate']
-    );
+    const created = await createEducationTopic(req.pool, userId, { topic, engagement });
 
-    await req.auditLog(userId, 'EDUCATION_TOPIC_CREATED', 'education_topics', result.rows[0].id, req);
+    await req.auditLog(userId, 'EDUCATION_TOPIC_CREATED', 'education_topics', created.id, req);
 
-    res.json(decryptTopic(result.rows[0]));
+    res.json(created);
   } catch (error) {
     req.logger.error('Education topic creation error:', error);
     res.status(500).json({ error: 'Failed to create education topic' });
@@ -74,3 +80,4 @@ router.put('/:topicId', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.createEducationTopic = createEducationTopic;

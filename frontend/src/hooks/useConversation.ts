@@ -27,6 +27,11 @@ export function useConversation() {
     // to a previous account) -- start a fresh one.
     if (!sessionId || (sessionQuery.isError && !sessionQuery.isFetching)) {
       api.createSession().then((session) => {
+        // Seed the query cache directly -- the session Sofia just created
+        // already carries her proactive opening turn (see backend
+        // routes/sessions.js), so this avoids an extra round-trip/flash of
+        // "loading" before that greeting appears.
+        queryClient.setQueryData(['session', session.id], session);
         localStorage.setItem(SESSION_ID_KEY, session.id);
         setSessionId(session.id);
       });

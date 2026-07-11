@@ -84,6 +84,151 @@ a {
   left: 0;
 }
 
+/* Motion -- gated behind prefers-reduced-motion so the animation language
+   adopted from sofia-enhanced-narrative.html never overrides a user's
+   reduced-motion setting. */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.12);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes highlight {
+    0% {
+      background: var(--color-warning-bg);
+    }
+    100% {
+      background: transparent;
+    }
+  }
+
+  .chat-log > .message:last-child {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .toast {
+    animation: slideUp 0.25s ease-out;
+  }
+
+  .story-moment-badge {
+    background: linear-gradient(90deg, var(--color-story-moment-bg) 25%, #fff 50%, var(--color-story-moment-bg) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s ease-in-out infinite;
+  }
+}
+
+/* Shared component patterns, adopted from sofia-enhanced-narrative.html's
+   visual language (cards with a colored left-accent bar, pill filters/
+   badges, a primary/secondary button pair, toasts). */
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4);
+}
+
+.left-accent-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 5px solid var(--accent-color, var(--color-primary));
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-4);
+  border-radius: 20px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: var(--font-size-sm);
+}
+
+.pill-active {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.button-primary {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.button-primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+
+.button-secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.toast {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 50;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-3) var(--space-4);
+  max-width: 320px;
+}
+
 /* Layout */
 
 .app-shell {
@@ -214,6 +359,86 @@ a {
   margin-bottom: var(--space-4);
 }
 
+/* The chat route needs more room than the app's default 720px page shell to
+   fit a two-panel chat + memory-journal layout (inspired by
+   sofia-enhanced-narrative.html) -- widened just for this page rather than
+   changing .app-main globally. */
+.chat-page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.chat-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-5);
+}
+
+.chat-panel {
+  flex: 2;
+  min-width: 0;
+}
+
+.memory-panel {
+  flex: 1.2;
+  min-width: 0;
+  position: sticky;
+  top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: calc(100vh - var(--space-6));
+  overflow-y: auto;
+}
+
+.memory-panel h2 {
+  font-size: var(--font-size-lg);
+  margin: 0;
+}
+
+.memory-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.memory-item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.memory-item {
+  padding: var(--space-3);
+}
+
+.memory-item-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-1);
+}
+
+.memory-item-text {
+  margin: 0;
+}
+
+.memory-item-meta {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: var(--space-1) 0 0;
+  text-transform: capitalize;
+}
+
+.memory-panel-links {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
 .chat-window {
   display: flex;
   flex-direction: column;
@@ -274,6 +499,22 @@ a {
   background: var(--color-surface-muted);
   color: var(--color-text);
   border-bottom-left-radius: var(--radius-sm);
+}
+
+.message-sofia.story-moment .message-bubble {
+  background: var(--color-story-moment-bg);
+  border: 1px solid var(--color-story-moment-border);
+}
+
+.story-moment-badge {
+  display: inline-block;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-warning-text);
+  background: var(--color-story-moment-bg);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  margin: 0 0 var(--space-1);
 }
 
 .message-clinician {
@@ -904,6 +1145,96 @@ a {
   font-size: var(--font-size-sm);
 }
 
+/* Document review modal -- native <dialog> for a real focus trap and
+   Escape-to-close; ::backdrop dims the page behind it. */
+
+.document-review-dialog {
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 0;
+  width: min(800px, 92vw);
+  max-height: 85vh;
+  box-shadow: var(--shadow-md);
+}
+
+.document-review-dialog::backdrop {
+  background: rgba(20, 20, 30, 0.5);
+}
+
+.document-review-content {
+  padding: var(--space-5);
+  overflow-y: auto;
+  max-height: 85vh;
+}
+
+.document-review-content section {
+  margin-top: var(--space-5);
+}
+
+.document-review-content h3 {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-2);
+}
+
+.review-item {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.review-item-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  min-height: var(--touch-target);
+}
+
+.review-item-toggle input[type='checkbox'] {
+  width: 24px;
+  height: 24px;
+}
+
+.review-item-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.review-item-field input[type='text'],
+.review-item-field select {
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+}
+
+.review-item-hint {
+  color: var(--color-warning-text);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+.review-item-excerpt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+  margin: 0;
+}
+
+.document-review-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
 @media (max-width: 600px) {
   .app-main {
     padding: var(--space-3);
@@ -915,6 +1246,16 @@ a {
 
   .message {
     max-width: 95%;
+  }
+
+  .chat-layout {
+    flex-direction: column;
+  }
+
+  .memory-panel {
+    position: static;
+    max-height: none;
+    width: 100%;
   }
 
   .goal-card-header {

@@ -29,21 +29,27 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Shared with routes/documents.js's document-extraction apply endpoint.
+async function createGoal(pool, userId, { goal, confidence, linkedBestLifeElements }) {
+  const result = await pool.query(
+    `INSERT INTO goals (user_id, goal, confidence, linked_best_life_elements)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [userId, encryptField(goal), confidence, linkedBestLifeElements]
+  );
+  return decryptGoal(result.rows[0]);
+}
+
 // Create goal
 router.post('/', async (req, res) => {
   try {
     const userId = req.user.id;
     const { goal, confidence, linkedBestLifeElements } = req.body;
 
-    const result = await req.pool.query(
-      `INSERT INTO goals (user_id, goal, confidence, linked_best_life_elements)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [userId, encryptField(goal), confidence, linkedBestLifeElements]
-    );
+    const created = await createGoal(req.pool, userId, { goal, confidence, linkedBestLifeElements });
 
-    await req.auditLog(userId, 'GOAL_CREATED', 'goals', result.rows[0].id, req);
+    await req.auditLog(userId, 'GOAL_CREATED', 'goals', created.id, req);
 
-    res.json(decryptGoal(result.rows[0]));
+    res.json(created);
   } catch (error) {
     req.logger.error('Goal creation error:', error);
     res.status(500).json({ error: 'Failed to create goal' });
@@ -141,3 +147,4 @@ router.post('/:goalId/progress', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.createGoal = createGoal;

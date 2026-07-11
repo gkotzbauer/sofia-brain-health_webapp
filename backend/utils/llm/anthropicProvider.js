@@ -40,4 +40,25 @@ async function generateTurn({ systemBlocks, messages }) {
   return toolUse.input;
 }
 
-module.exports = { generateTurn, REQUIRED_ENV_VAR };
+// A one-off forced-tool-call, distinct from the per-turn conversation loop
+// above (generateTurn) -- used by routes/documents.js's /extract endpoint to
+// pull candidate profile fields out of an uploaded document. See the
+// matching function in openaiProvider.js.
+async function generateStructuredExtraction({ systemText, userText, toolName, toolDescription, parameters }) {
+  const completion = await getClient().messages.create({
+    model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-5',
+    max_tokens: 1536,
+    system: systemText,
+    messages: [{ role: 'user', content: userText }],
+    tools: [{ name: toolName, description: toolDescription, input_schema: parameters }],
+    tool_choice: { type: 'tool', name: toolName }
+  });
+
+  const toolUse = completion.content.find((block) => block.type === 'tool_use');
+  if (!toolUse) {
+    throw new Error('Anthropic response had no tool_use block');
+  }
+  return toolUse.input;
+}
+
+module.exports = { generateTurn, generateStructuredExtraction, REQUIRED_ENV_VAR };

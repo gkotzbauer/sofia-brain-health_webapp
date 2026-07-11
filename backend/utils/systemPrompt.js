@@ -164,13 +164,66 @@ function formatDocuments(documents) {
     .join('\n\n');
 }
 
+// Whether/how to nudge someone with a sparse profile to share more about
+// themselves -- either in conversation or by uploading a clinician
+// document. Sparse = below 40/100 (see routes/users.js calculateCompleteness).
+// Only nudges early in the relationship, and only once per state.profilePromptedAt
+// (see utils/turnState.js) -- a soft, one-time invitation, not a checklist demand.
+function formatProfileStatus(profileCompleteness, aboutMe, turnCount, alreadyPrompted) {
+  const bestCount = aboutMe?.best_life_elements?.length || 0;
+  const concernCount = aboutMe?.concerns?.length || 0;
+  const confidenceSet = Boolean(aboutMe?.confidence_level);
+  const lines = [
+    `- Profile completeness: ${profileCompleteness}/100 (best-life elements: ${bestCount} recorded, concerns: ${concernCount} recorded, confidence level: ${confidenceSet ? 'set' : 'not set'}).`
+  ];
+
+  const isSparse = profileCompleteness < 40;
+  const isEarly = (turnCount ?? 0) < 3;
+  if (isSparse && isEarly && !alreadyPrompted) {
+    lines.push(
+      "- This person's profile is still sparse and you're early in getting to know them. Naturally invite them to share more about themselves -- either by talking with you now, or, if they have a document from a clinician (e.g. a care plan or after-visit summary), by uploading it on the Documents page. Do this warmly and once; don't turn it into a checklist demand."
+    );
+  } else if (isSparse && alreadyPrompted) {
+    lines.push('- Their profile is still sparse, but you already invited them to share more recently -- do not repeat that invitation again this turn.');
+  }
+
+  return lines.join('\n');
+}
+
+// The proactive "Sofia speaks first" opening, keyed off how long it's been
+// since this person's last session (see routes/sessions.js). Only present
+// when this turn is a session-opening turn (see buildSystemPrompt below).
+function formatOpening(opening) {
+  const { isFirstTime, greetingBucket, daysSinceLastSession, lastGoal, lastConcern } = opening;
+
+  const bucketText = isFirstTime
+    ? "This is this person's very first conversation with you."
+    : greetingBucket === 'returningToday'
+      ? 'They were just here earlier today.'
+      : greetingBucket === 'returningRecent'
+        ? `They were last here ${daysSinceLastSession} day${daysSinceLastSession === 1 ? '' : 's'} ago.`
+        : `It's been a while -- ${daysSinceLastSession} days since they were last here.`;
+
+  const referenceParts = [];
+  if (lastGoal) referenceParts.push(`their goal "${lastGoal}"`);
+  if (lastConcern) referenceParts.push(`their concern "${lastConcern}"`);
+  const referenceText = !isFirstTime && referenceParts.length
+    ? ` Consider referencing something specific and recent, like ${referenceParts.join(' or ')}.`
+    : '';
+
+  return `
+## Session opening:
+This is a session-opening turn -- there is no real user message yet (the one message you see below is only a placeholder marking that the session started; ignore its literal content, do not respond to it as if it were something the person said). ${bucketText}${referenceText} Generate a warm, natural greeting appropriate to this -- speak first, don't wait to be addressed. ${isFirstTime ? "Since this is a first meeting, briefly introduce yourself (who Sofia is, what a Cognitive Care Companion does) before inviting them to share what's on their mind." : ''}
+`.trim();
+}
+
 // Returns the system prompt as an array of content blocks rather than one
 // string, so the (large, identical-for-every-turn-and-every-user)
 // methodology instructions can be marked for Anthropic prompt caching while
 // the small per-user dynamic section -- which changes every turn -- stays
 // outside the cached prefix. See routes/chat.js, which passes this array
 // directly as the `system` param.
-function buildSystemPrompt({ user, aboutMe, goals, chapters, documents, state }) {
+function buildSystemPrompt({ user, aboutMe, goals, chapters, documents, state, profileCompleteness = 0, opening = null }) {
   const activeGoals = (goals || []).filter((goal) => goal.status === 'active');
   const recentChapters = (chapters || []).slice(0, 3);
 
@@ -192,6 +245,9 @@ function buildSystemPrompt({ user, aboutMe, goals, chapters, documents, state })
       : 'none yet'
   }
 
+## Profile status:
+${formatProfileStatus(profileCompleteness, aboutMe, state?.turnCount, Boolean(state?.profilePromptedAt))}
+
 ## Documents on file:
 ${formatDocuments(documents)}
 
@@ -202,6 +258,7 @@ ${formatDocuments(documents)}
 - Turn count this session: ${state?.turnCount ?? 0}
 - Recent pivots: ${state?.pivotHistory?.length ? state.pivotHistory.map((p) => p.type).join(', ') : 'none'}
 - Recent safety flags: ${state?.safetyFlags?.length ? state.safetyFlags.map((f) => `${f.triggerType || 'none'}/${f.severity}`).join(', ') : 'none'}
+${opening ? `\n${formatOpening(opening)}` : ''}
 `.trim();
 
   return [

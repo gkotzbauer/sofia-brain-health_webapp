@@ -19,6 +19,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Shared with routes/documents.js's document-extraction apply endpoint, so
+// both the manual "add a value" form and an accepted document-extraction
+// candidate write through the same insert logic.
+async function createValue(pool, userId, { valueText, importance }) {
+  const result = await pool.query(
+    `INSERT INTO values (user_id, value_text, importance) VALUES ($1, $2, $3) RETURNING *`,
+    [userId, encryptField(valueText), importance || 'high']
+  );
+  return decryptValue(result.rows[0]);
+}
+
 // Create a value
 router.post('/', async (req, res) => {
   try {
@@ -29,14 +40,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'valueText is required' });
     }
 
-    const result = await req.pool.query(
-      `INSERT INTO values (user_id, value_text, importance) VALUES ($1, $2, $3) RETURNING *`,
-      [userId, encryptField(valueText), importance || 'high']
-    );
+    const value = await createValue(req.pool, userId, { valueText, importance });
 
-    await req.auditLog(userId, 'VALUE_CREATED', 'values', result.rows[0].id, req);
+    await req.auditLog(userId, 'VALUE_CREATED', 'values', value.id, req);
 
-    res.json(decryptValue(result.rows[0]));
+    res.json(value);
   } catch (error) {
     req.logger.error('Value creation error:', error);
     res.status(500).json({ error: 'Failed to create value' });
@@ -74,3 +82,4 @@ router.put('/:valueId', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.createValue = createValue;

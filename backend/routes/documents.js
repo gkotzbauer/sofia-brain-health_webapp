@@ -5,6 +5,40 @@ const path = require('path');
 const fs = require('fs').promises;
 const pdfParse = require('pdf-parse');
 const { encryptJSON, decryptJSON, encryptField, decryptField } = require('../utils/phiCrypto');
+const llm = require('../utils/llm');
+const {
+  DOCUMENT_EXTRACTION_TOOL_NAME,
+  DOCUMENT_EXTRACTION_TOOL_DESCRIPTION,
+  DOCUMENT_EXTRACTION_PARAMETERS
+} = require('../utils/llm/documentExtractionSchema');
+const { updateAboutMe } = require('./users');
+const { createValue } = require('./values');
+const { createConcern } = require('./concerns');
+const { createEducationTopic } = require('./educationTopics');
+const { createGoal } = require('./goals');
+
+// How much of a document's extracted text gets sent to the LLM for
+// candidate-field extraction -- larger than the 1500-char per-turn chat cap
+// (utils/systemPrompt.js DOCUMENT_EXCERPT_CAP) since this is a one-off call,
+// not spent on every conversational turn.
+const EXTRACTION_TEXT_CAP = 4000;
+// Below this, there's not enough text to meaningfully extract anything --
+// skip the LLM call entirely rather than spend one on near-nothing.
+const MIN_EXTRACTABLE_LENGTH = 50;
+
+// Appends new string items to an existing array, skipping blanks and exact
+// duplicates -- used to merge accepted document-extraction candidates into
+// an existing About Me profile without ever discarding what was there.
+function dedupeAppend(existing, incoming) {
+  const merged = [...(existing || [])];
+  for (const item of incoming || []) {
+    const trimmed = typeof item === 'string' ? item.trim() : '';
+    if (trimmed && !merged.includes(trimmed)) {
+      merged.push(trimmed);
+    }
+  }
+  return merged;
+}
 
 function decryptHistoryRow(row) {
   if (!row) return row;
@@ -297,6 +331,192 @@ router.get('/content/:documentId', async (req, res) => {
   } catch (error) {
     req.logger.error('Document content fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch document content' });
+  }
+});
+
+// Extract candidate profile fields from a document the user has already
+// uploaded (routes/documents.js POST /upload). A separate step from upload
+// itself so a slow/failed LLM call never blocks the upload response, and so
+// extraction can be retried without re-uploading. Never writes anything --
+// returns raw candidates, each grounded in a source_excerpt, for the
+// frontend's DocumentReviewModal to show the person before they choose what
+// (if anything) to accept. See POST /:documentId/apply-extraction below for
+// the write side of this human-in-the-loop flow.
+router.post('/:documentId/extract', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { documentId } = req.params;
+
+    const result = await req.pool.query(
+      'SELECT * FROM document_uploads WHERE id = $1 AND user_id = $2',
+      [documentId, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    const metadata = decryptJSON(result.rows[0].metadata) || {};
+    const extractedText = (metadata.extractedText || '').trim();
+
+    if (extractedText.length < MIN_EXTRACTABLE_LENGTH) {
+      return res.json({ documentId, candidates: {} });
+    }
+
+    if (!llm.isConfigured()) {
+      return res.status(503).json({ error: 'The document extraction assistant is not configured on this server yet.' });
+    }
+
+    const systemText =
+      "You are extracting structured profile candidates from a document (e.g. a clinician's after-visit summary or care plan) for an aging-adult cognitive-care app. Only propose fields you can ground in an explicit excerpt from the text below -- do not infer or invent. Leave a field/array empty if the document doesn't address it.";
+    const userText = `--- "${result.rows[0].filename}" ---\n${extractedText.slice(0, EXTRACTION_TEXT_CAP)}`;
+
+    const candidates = await llm.getProvider().generateStructuredExtraction({
+      systemText,
+      userText,
+      toolName: DOCUMENT_EXTRACTION_TOOL_NAME,
+      toolDescription: DOCUMENT_EXTRACTION_TOOL_DESCRIPTION,
+      parameters: DOCUMENT_EXTRACTION_PARAMETERS
+    });
+
+    await req.auditLog(userId, 'DOCUMENT_EXTRACTED', 'document_uploads', documentId, req);
+
+    res.json({ documentId, candidates });
+  } catch (error) {
+    req.logger.error('Document extraction error:', error);
+    res.status(500).json({ error: 'Failed to extract candidates from document' });
+  }
+});
+
+// Writes only the candidates the person accepted (and possibly edited) in
+// the review modal -- every top-level field is optional, present only when
+// accepted. Reuses the same insert/update functions the manual profile
+// forms use (routes/users.js updateAboutMe, routes/values.js createValue,
+// etc.) rather than duplicating storage logic, and tags every write's
+// profile_variable_history row source:'document' so it's distinguishable
+// from a self-entered edit (see profile_variable_history.source).
+router.post('/:documentId/apply-extraction', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { documentId } = req.params;
+    const { bestLifeElements, concerns, confidenceLevel, values, concernsDetailed, educationTopics, goals } = req.body;
+
+    const docResult = await req.pool.query(
+      'SELECT id FROM document_uploads WHERE id = $1 AND user_id = $2',
+      [documentId, userId]
+    );
+    if (docResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    const sourceDetails = { documentId, action: 'extraction_applied', timestamp: new Date().toISOString() };
+    const applied = {};
+    let appliedCount = 0;
+
+    const hasAboutMeUpdate =
+      (Array.isArray(bestLifeElements) && bestLifeElements.length > 0) ||
+      (Array.isArray(concerns) && concerns.length > 0) ||
+      Boolean(confidenceLevel);
+
+    if (hasAboutMeUpdate) {
+      const currentResult = await req.pool.query('SELECT * FROM about_me_profiles WHERE user_id = $1', [userId]);
+      const current = currentResult.rows[0];
+      const currentBestLifeElements = current ? decryptJSON(current.best_life_elements) || [] : [];
+      const currentConcerns = current ? decryptJSON(current.concerns) || [] : [];
+
+      const mergedBestLifeElements = dedupeAppend(currentBestLifeElements, bestLifeElements);
+      const mergedConcerns = dedupeAppend(currentConcerns, concerns);
+      const finalConfidenceLevel = confidenceLevel || current?.confidence_level || null;
+
+      applied.aboutMe = await updateAboutMe(
+        req.pool,
+        userId,
+        {
+          bestLifeElements: mergedBestLifeElements,
+          concerns: mergedConcerns,
+          confidenceLevel: finalConfidenceLevel,
+          userDefinedNextSteps: current?.user_defined_next_steps || []
+        },
+        { source: 'document', sourceDetails }
+      );
+      appliedCount += (bestLifeElements?.length || 0) + (concerns?.length || 0) + (confidenceLevel ? 1 : 0);
+    }
+
+    if (Array.isArray(values) && values.length) {
+      applied.values = [];
+      for (const item of values) {
+        if (typeof item?.valueText !== 'string' || !item.valueText.trim()) continue;
+        const created = await createValue(req.pool, userId, { valueText: item.valueText, importance: item.importance });
+        await req.pool.query(
+          `INSERT INTO profile_variable_history (user_id, variable_name, variable_value, source, source_details)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [userId, 'value', encryptField(item.valueText), 'document', encryptJSON(sourceDetails)]
+        );
+        applied.values.push(created);
+        appliedCount += 1;
+      }
+    }
+
+    if (Array.isArray(concernsDetailed) && concernsDetailed.length) {
+      applied.concerns = [];
+      for (const item of concernsDetailed) {
+        if (typeof item?.concern !== 'string' || !item.concern.trim()) continue;
+        const created = await createConcern(req.pool, userId, { concern: item.concern, severity: item.severity, context: item.context });
+        await req.pool.query(
+          `INSERT INTO profile_variable_history (user_id, variable_name, variable_value, source, source_details)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [userId, 'concern', encryptField(item.concern), 'document', encryptJSON(sourceDetails)]
+        );
+        applied.concerns.push(created);
+        appliedCount += 1;
+      }
+    }
+
+    if (Array.isArray(educationTopics) && educationTopics.length) {
+      applied.educationTopics = [];
+      for (const item of educationTopics) {
+        if (typeof item?.topic !== 'string' || !item.topic.trim()) continue;
+        const created = await createEducationTopic(req.pool, userId, { topic: item.topic, engagement: item.engagement });
+        await req.pool.query(
+          `INSERT INTO profile_variable_history (user_id, variable_name, variable_value, source, source_details)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [userId, 'educationTopic', encryptField(item.topic), 'document', encryptJSON(sourceDetails)]
+        );
+        applied.educationTopics.push(created);
+        appliedCount += 1;
+      }
+    }
+
+    if (Array.isArray(goals) && goals.length) {
+      applied.goals = [];
+      for (const item of goals) {
+        // Preserves the conversational confidence-gate's spirit (see
+        // utils/systemPrompt.js "Goals") even for a document-derived goal --
+        // the review UI requires the person to set a confidence value
+        // before a goal candidate can be accepted, so one is always
+        // expected here.
+        if (typeof item?.goal !== 'string' || !item.goal.trim() || typeof item.confidence !== 'number') continue;
+        const created = await createGoal(req.pool, userId, { goal: item.goal, confidence: item.confidence, linkedBestLifeElements: null });
+        await req.pool.query(
+          `INSERT INTO profile_variable_history (user_id, variable_name, variable_value, source, source_details)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [userId, 'goal', encryptField(item.goal), 'document', encryptJSON(sourceDetails)]
+        );
+        applied.goals.push(created);
+        appliedCount += 1;
+      }
+    }
+
+    await req.pool.query(
+      `UPDATE document_uploads SET applied_count = $1, processed_timestamp = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3`,
+      [appliedCount, documentId, userId]
+    );
+
+    await req.auditLog(userId, 'DOCUMENT_EXTRACTION_APPLIED', 'document_uploads', documentId, req);
+
+    res.json({ appliedCount, applied });
+  } catch (error) {
+    req.logger.error('Document extraction apply error:', error);
+    res.status(500).json({ error: 'Failed to apply document extraction' });
   }
 });
 

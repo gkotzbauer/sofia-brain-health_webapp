@@ -24,6 +24,15 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Shared with routes/documents.js's document-extraction apply endpoint.
+async function createConcern(pool, userId, { concern, severity, context }) {
+  const result = await pool.query(
+    `INSERT INTO concerns (user_id, concern, severity, context) VALUES ($1, $2, $3, $4) RETURNING *`,
+    [userId, encryptField(concern), severity || 'moderate', encryptField(context)]
+  );
+  return decryptConcern(result.rows[0]);
+}
+
 // Create a concern
 router.post('/', async (req, res) => {
   try {
@@ -34,14 +43,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'concern is required' });
     }
 
-    const result = await req.pool.query(
-      `INSERT INTO concerns (user_id, concern, severity, context) VALUES ($1, $2, $3, $4) RETURNING *`,
-      [userId, encryptField(concern), severity || 'moderate', encryptField(context)]
-    );
+    const created = await createConcern(req.pool, userId, { concern, severity, context });
 
-    await req.auditLog(userId, 'CONCERN_CREATED', 'concerns', result.rows[0].id, req);
+    await req.auditLog(userId, 'CONCERN_CREATED', 'concerns', created.id, req);
 
-    res.json(decryptConcern(result.rows[0]));
+    res.json(created);
   } catch (error) {
     req.logger.error('Concern creation error:', error);
     res.status(500).json({ error: 'Failed to create concern' });
@@ -87,3 +93,4 @@ router.put('/:concernId', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.createConcern = createConcern;

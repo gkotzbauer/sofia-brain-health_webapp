@@ -97,93 +97,78 @@ router.get('/profile', async (req, res) => {
   }
 });
 
+// Shared with routes/documents.js's document-extraction apply endpoint --
+// `source`/`sourceDetails` let a document-derived update tag its
+// profile_variable_history rows distinctly from a manual edit (see
+// profile_variable_history.source, already used elsewhere to distinguish
+// 'manual' from 'document').
+async function updateAboutMe(pool, userId, { bestLifeElements, concerns, confidenceLevel, userDefinedNextSteps }, options = {}) {
+  const source = options.source || 'manual';
+  const sourceDetails = options.sourceDetails || { action: 'about_me_update', timestamp: new Date().toISOString() };
+
+  const currentResult = await pool.query('SELECT * FROM about_me_profiles WHERE user_id = $1', [userId]);
+  const current = currentResult.rows[0];
+  const currentBestLifeElements = current ? decryptJSON(current.best_life_elements) || [] : [];
+  const currentConcerns = current ? decryptJSON(current.concerns) || [] : [];
+
+  if (current) {
+    if (JSON.stringify(currentBestLifeElements) !== JSON.stringify(bestLifeElements)) {
+      await pool.query(
+        `INSERT INTO profile_variable_history
+         (user_id, variable_name, variable_value, previous_value, source, source_details)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, 'bestLifeElements', encryptJSON(bestLifeElements), encryptJSON(currentBestLifeElements), source, encryptJSON(sourceDetails)]
+      );
+    }
+
+    if (JSON.stringify(currentConcerns) !== JSON.stringify(concerns)) {
+      await pool.query(
+        `INSERT INTO profile_variable_history
+         (user_id, variable_name, variable_value, previous_value, source, source_details)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, 'concerns', encryptJSON(concerns), encryptJSON(currentConcerns), source, encryptJSON(sourceDetails)]
+      );
+    }
+
+    if (current.confidence_level !== confidenceLevel) {
+      await pool.query(
+        `INSERT INTO profile_variable_history
+         (user_id, variable_name, variable_value, previous_value, source, source_details)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, 'confidenceLevel', encryptField(confidenceLevel), encryptField(current.confidence_level), source, encryptJSON(sourceDetails)]
+      );
+    }
+  }
+
+  const result = await pool.query(
+    `UPDATE about_me_profiles
+     SET best_life_elements = $1, concerns = $2, confidence_level = $3,
+         user_defined_next_steps = $4, profile_completeness = $5
+     WHERE user_id = $6 RETURNING *`,
+    [
+      encryptJSON(bestLifeElements),
+      encryptJSON(concerns),
+      confidenceLevel,
+      JSON.stringify(userDefinedNextSteps),
+      calculateCompleteness(bestLifeElements, concerns, confidenceLevel),
+      userId
+    ]
+  );
+
+  return decryptAboutMe(result.rows[0]);
+}
+
 // Update About Me profile
 router.put('/about-me', async (req, res) => {
   try {
     const userId = req.user.id;
     const { bestLifeElements, concerns, confidenceLevel, userDefinedNextSteps } = req.body;
 
-    // Get current values for comparison
-    const currentResult = await req.pool.query(
-      'SELECT * FROM about_me_profiles WHERE user_id = $1',
-      [userId]
-    );
-    const current = currentResult.rows[0];
-    const currentBestLifeElements = current ? decryptJSON(current.best_life_elements) || [] : [];
-    const currentConcerns = current ? decryptJSON(current.concerns) || [] : [];
+    const updated = await updateAboutMe(req.pool, userId, { bestLifeElements, concerns, confidenceLevel, userDefinedNextSteps });
 
-    // Track changes in profile history
-    if (current) {
-      // Track best life elements changes
-      if (JSON.stringify(currentBestLifeElements) !== JSON.stringify(bestLifeElements)) {
-        await req.pool.query(
-          `INSERT INTO profile_variable_history
-           (user_id, variable_name, variable_value, previous_value, source, source_details)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            userId,
-            'bestLifeElements',
-            encryptJSON(bestLifeElements),
-            encryptJSON(currentBestLifeElements),
-            'manual',
-            encryptJSON({ action: 'about_me_update', timestamp: new Date().toISOString() })
-          ]
-        );
-      }
+    await req.auditLog(userId, 'ABOUT_ME_UPDATED', 'about_me_profiles', updated.id, req);
 
-      // Track concerns changes
-      if (JSON.stringify(currentConcerns) !== JSON.stringify(concerns)) {
-        await req.pool.query(
-          `INSERT INTO profile_variable_history
-           (user_id, variable_name, variable_value, previous_value, source, source_details)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            userId,
-            'concerns',
-            encryptJSON(concerns),
-            encryptJSON(currentConcerns),
-            'manual',
-            encryptJSON({ action: 'about_me_update', timestamp: new Date().toISOString() })
-          ]
-        );
-      }
-
-      // Track confidence level changes
-      if (current.confidence_level !== confidenceLevel) {
-        await req.pool.query(
-          `INSERT INTO profile_variable_history
-           (user_id, variable_name, variable_value, previous_value, source, source_details)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            userId,
-            'confidenceLevel',
-            encryptField(confidenceLevel),
-            encryptField(current.confidence_level),
-            'manual',
-            encryptJSON({ action: 'about_me_update', timestamp: new Date().toISOString() })
-          ]
-        );
-      }
-    }
-
-    const result = await req.pool.query(
-      `UPDATE about_me_profiles
-       SET best_life_elements = $1, concerns = $2, confidence_level = $3,
-           user_defined_next_steps = $4, profile_completeness = $5
-       WHERE user_id = $6 RETURNING *`,
-      [
-        encryptJSON(bestLifeElements),
-        encryptJSON(concerns),
-        confidenceLevel,
-        JSON.stringify(userDefinedNextSteps),
-        calculateCompleteness(bestLifeElements, concerns, confidenceLevel),
-        userId
-      ]
-    );
-
-    await req.auditLog(userId, 'ABOUT_ME_UPDATED', 'about_me_profiles', result.rows[0].id, req);
-
-    res.json(decryptAboutMe(result.rows[0]));
+    res.json(updated);
   } catch (error) {
     req.logger.error('About Me update error:', error);
     res.status(500).json({ error: 'Failed to update About Me profile' });
@@ -233,3 +218,4 @@ router.delete('/me', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.updateAboutMe = updateAboutMe;

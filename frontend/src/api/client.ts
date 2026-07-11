@@ -80,6 +80,8 @@ export interface ConversationTurn {
   content: string;
   timestamp: string;
   authorName?: string;
+  isOpening?: boolean;
+  storyMoment?: boolean;
 }
 
 export interface PendingConfirmation {
@@ -99,6 +101,7 @@ export interface ConversationState {
   safetyFlags: Array<{ turnIndex: number; source: string; triggerType: string | null; severity: string }>;
   turnCount: number;
   lastTurnAt: string;
+  profilePromptedAt?: number | null;
 }
 
 export interface SofiaSession {
@@ -164,6 +167,70 @@ export interface DocumentUploadResult {
   document: DocumentUploadRecord;
   extractedText: string;
   message: string;
+}
+
+// Candidate profile fields the extraction assistant proposed from a
+// document -- each grounded in a source_excerpt, never auto-written (see
+// backend routes/documents.js POST /:documentId/extract and
+// /apply-extraction). Field shapes intentionally mirror what each existing
+// create endpoint (values/concerns/educationTopics/goals) already expects.
+export interface ExtractionCandidateText {
+  text: string;
+  source_excerpt: string;
+}
+export interface ExtractionCandidateConfidence {
+  value: string;
+  source_excerpt: string;
+}
+export interface ExtractionCandidateValue {
+  value_text: string;
+  importance?: string;
+  source_excerpt: string;
+}
+export interface ExtractionCandidateConcernDetailed {
+  concern: string;
+  severity?: string;
+  context?: string;
+  source_excerpt: string;
+}
+export interface ExtractionCandidateEducationTopic {
+  topic: string;
+  engagement?: string;
+  source_excerpt: string;
+}
+export interface ExtractionCandidateGoal {
+  goal: string;
+  source_excerpt: string;
+}
+
+export interface DocumentExtractionCandidates {
+  best_life_elements?: ExtractionCandidateText[];
+  concerns?: ExtractionCandidateText[];
+  confidence_level?: ExtractionCandidateConfidence | null;
+  values?: ExtractionCandidateValue[];
+  concerns_detailed?: ExtractionCandidateConcernDetailed[];
+  education_topics?: ExtractionCandidateEducationTopic[];
+  goals?: ExtractionCandidateGoal[];
+}
+
+export interface DocumentExtractionResult {
+  documentId: string;
+  candidates: DocumentExtractionCandidates;
+}
+
+export interface ApplyExtractionPayload {
+  bestLifeElements?: string[];
+  concerns?: string[];
+  confidenceLevel?: string;
+  values?: Array<{ valueText: string; importance?: string }>;
+  concernsDetailed?: Array<{ concern: string; severity?: string; context?: string }>;
+  educationTopics?: Array<{ topic: string; engagement?: string }>;
+  goals?: Array<{ goal: string; confidence: number }>;
+}
+
+export interface ApplyExtractionResult {
+  appliedCount: number;
+  applied: Record<string, unknown>;
 }
 
 export interface ValueItem {
@@ -263,6 +330,13 @@ export const api = {
 
   uploadDocument: (file: File) => uploadFile<DocumentUploadResult>('/documents/upload', file),
   listDocumentUploads: () => request<DocumentUploadRecord[]>('/documents/document-uploads'),
+  extractDocument: (documentId: string) =>
+    request<DocumentExtractionResult>(`/documents/${documentId}/extract`, { method: 'POST' }),
+  applyDocumentExtraction: (documentId: string, payload: ApplyExtractionPayload) =>
+    request<ApplyExtractionResult>(`/documents/${documentId}/apply-extraction`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
 
   listPendingClinicalAlerts: () => request<ClinicalAlert[]>('/admin/clinical-alerts/pending'),
   acknowledgeClinicalAlert: (alertId: string) =>

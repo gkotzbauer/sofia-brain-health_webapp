@@ -52,4 +52,33 @@ async function generateTurn({ systemBlocks, messages }) {
   }
 }
 
-module.exports = { generateTurn, REQUIRED_ENV_VAR };
+// A one-off forced-tool-call, distinct from the per-turn conversation loop
+// above (generateTurn) -- used by routes/documents.js's /extract endpoint to
+// pull candidate profile fields out of an uploaded document. Takes its own
+// tool definition rather than the fixed SOFIA_TURN_TOOL, and a short
+// purpose-built system/user text rather than the full conversation system
+// prompt (which would be irrelevant/wasteful token spend here).
+async function generateStructuredExtraction({ systemText, userText, toolName, toolDescription, parameters }) {
+  const completion = await getClient().chat.completions.create({
+    model: process.env.OPENAI_MODEL || 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemText },
+      { role: 'user', content: userText }
+    ],
+    tools: [{ type: 'function', function: { name: toolName, description: toolDescription, parameters } }],
+    tool_choice: { type: 'function', function: { name: toolName } }
+  });
+
+  const toolCall = completion.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall) {
+    throw new Error('OpenAI response had no tool call');
+  }
+
+  try {
+    return JSON.parse(toolCall.function.arguments);
+  } catch (parseError) {
+    throw new Error('OpenAI tool call arguments were not valid JSON: ' + parseError.message);
+  }
+}
+
+module.exports = { generateTurn, generateStructuredExtraction, REQUIRED_ENV_VAR };

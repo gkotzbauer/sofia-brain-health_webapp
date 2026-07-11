@@ -1,6 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { TextSizeControl } from './TextSizeControl';
 
 const NAV_LINKS = [
   { to: '/chat', label: 'Conversation' },
@@ -40,7 +39,6 @@ export function NavBar() {
         </nav>
       )}
       <div className="nav-actions">
-        <TextSizeControl />
         {isAuthenticated && (
           <div className="nav-user">
             <span className="nav-user-name">{user?.name}</span>

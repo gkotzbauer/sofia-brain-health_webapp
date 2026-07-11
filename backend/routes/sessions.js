@@ -1,6 +1,100 @@
 const express = require('express');
 const router = express.Router();
 const { encryptJSON, decryptJSON } = require('../utils/phiCrypto');
+const { buildSystemPrompt } = require('../utils/systemPrompt');
+const { loadUserContext } = require('../utils/loadUserContext');
+const { buildMergedState } = require('../utils/turnState');
+const { MAX_CONTEXT_MESSAGES } = require('../utils/chatConfig');
+const llm = require('../utils/llm');
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function greetingBucketFor(daysSinceLastSession) {
+  if (daysSinceLastSession <= 0) return 'returningToday';
+  if (daysSinceLastSession < 7) return 'returningRecent';
+  return 'returningDistant';
+}
+
+// Generates Sofia's proactive opening turn for a brand-new session, using
+// the exact same single-LLM-call machinery routes/chat.js uses for a normal
+// turn (buildSystemPrompt + generateTurn + buildMergedState) -- just with no
+// preceding user message. Mutates `session` in place with the generated
+// conversation_log/state on success. Never throws -- a failure here must
+// not prevent session creation; the frontend falls back to a static
+// greeting when conversation_log comes back empty (see ChatWindow.tsx).
+async function attachOpeningTurn(req, session, userId) {
+  if (!llm.isConfigured()) return;
+
+  try {
+    const previousResult = await req.pool.query(
+      `SELECT session_date FROM sessions WHERE user_id = $1 AND id != $2 ORDER BY session_date DESC LIMIT 1`,
+      [userId, session.id]
+    );
+    const previousSession = previousResult.rows[0];
+    const isFirstTime = !previousSession;
+    const daysSinceLastSession = isFirstTime
+      ? null
+      : Math.floor((Date.now() - new Date(previousSession.session_date).getTime()) / MS_PER_DAY);
+    const greetingBucket = isFirstTime ? null : greetingBucketFor(daysSinceLastSession);
+
+    const { aboutMe, goals, chapters, documents, profileCompleteness } = await loadUserContext(req.pool, userId);
+    const activeGoals = (goals || []).filter((goal) => goal.status === 'active');
+
+    const systemBlocks = buildSystemPrompt({
+      user: req.user,
+      aboutMe,
+      goals,
+      chapters,
+      documents,
+      state: {},
+      profileCompleteness,
+      opening: {
+        isFirstTime,
+        greetingBucket,
+        daysSinceLastSession,
+        lastGoal: activeGoals[0]?.goal || null,
+        lastConcern: aboutMe?.concerns?.[0] || null
+      }
+    });
+
+    // Anthropic requires at least one message with role "user"; this
+    // placeholder is explicitly called out as ignorable in the "Session
+    // opening" system-prompt block above, for both providers.
+    const turn = await llm.getProvider().generateTurn({
+      systemBlocks,
+      messages: [{ role: 'user', content: '[session start -- no message yet]' }]
+    });
+
+    const now = new Date().toISOString();
+    const openingLog = [
+      { role: 'assistant', content: turn.reply, timestamp: now, isOpening: true, storyMoment: Boolean(turn.proposed_chapter) }
+    ];
+    // No keyword-based safety check runs for the opening turn (there's no
+    // real user message to scan), and no clinical alert fires off it --
+    // the model's own safety_assessment is still required by the schema and
+    // will read as low/none for an ordinary greeting.
+    const mergedState = buildMergedState({
+      turn,
+      existingState: {},
+      now,
+      isContextCapped: false,
+      contextWindowSize: MAX_CONTEXT_MESSAGES,
+      contextCapLastAlertedAt: null,
+      safetyEntry: null,
+      profileCompleteness
+    });
+
+    await req.pool.query(
+      'UPDATE sessions SET conversation_log = $1, state = $2 WHERE id = $3',
+      [encryptJSON(openingLog), JSON.stringify(mergedState), session.id]
+    );
+
+    session.conversation_log = encryptJSON(openingLog);
+    session.state = mergedState;
+  } catch (openingError) {
+    req.logger.error('Session opening-turn generation failed (session still created):', openingError);
+  }
+}
 
 function decryptSession(row) {
   if (!row) return row;
@@ -60,6 +154,7 @@ router.post('/', async (req, res) => {
       'INSERT INTO sessions (user_id) VALUES ($1) RETURNING *',
       [userId]
     );
+    const session = result.rows[0];
 
     // Update user's total sessions
     await req.pool.query(
@@ -67,9 +162,13 @@ router.post('/', async (req, res) => {
       [userId]
     );
 
-    await req.auditLog(userId, 'SESSION_CREATED', 'sessions', result.rows[0].id, req);
+    await req.auditLog(userId, 'SESSION_CREATED', 'sessions', session.id, req);
 
-    res.json(decryptSession(result.rows[0]));
+    // Sofia speaks first -- see attachOpeningTurn above. Never fails session
+    // creation; on any error the session is simply returned with an empty log.
+    await attachOpeningTurn(req, session, userId);
+
+    res.json(decryptSession(session));
   } catch (error) {
     req.logger.error('Session creation error:', error);
     res.status(500).json({ error: 'Failed to create session' });

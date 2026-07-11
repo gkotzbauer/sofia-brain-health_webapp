@@ -17,6 +17,11 @@ export function ChatWindow() {
     <div className="chat-window">
       <div className="chat-log" ref={logRef} aria-live="polite" aria-relevant="additions">
         {isLoading && messages.length === 0 && <p className="chat-status">Sofia is getting ready...</p>}
+        {/* Sofia normally speaks first -- her opening turn is generated
+            server-side when the session is created (routes/sessions.js) and
+            arrives as a real message in `messages`. This only shows if that
+            generation failed (e.g. the LLM call errored) and the session
+            genuinely has no messages yet. */}
         {!isLoading && messages.length === 0 && (
           <p className="chat-status">Hello, I'm Sofia. Whenever you're ready, tell me what's on your mind.</p>
         )}
