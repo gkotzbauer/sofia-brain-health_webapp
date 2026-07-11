@@ -308,7 +308,12 @@ a {
 }
 
 .app-main-wide {
-  max-width: 1100px;
+  /* Full-bleed on the right so .memory-panel (the "Your story journal"
+     column) can sit flush against the actual edge of the page, not just
+     the edge of a centered, capped container -- see .chat-layout below. */
+  max-width: none;
+  margin: 0;
+  padding-right: 0;
 }
 
 /* Auth pages */
@@ -362,21 +367,27 @@ a {
    route) -- a two-panel chat + memory-journal layout needs more room than
    the app's default 720px page shell. The page's own <h1> is folded into
    .chat-hero (below) rather than a separate plain heading, matching
-   sofia-fixed(4).html's gradient banner. */
+   sofia-fixed(4).html's gradient banner. Grid, not flex: the chat panel
+   gets a fixed, generous column on the left and the memory panel gets
+   whatever's left, flush against the true right edge of the page (rather
+   than two proportional flex columns both stopping short of the edge). */
 .chat-layout {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 820px) 1fr;
+  align-items: start;
   gap: var(--space-5);
 }
 
 .chat-panel {
-  flex: 2;
   min-width: 0;
 }
 
 .memory-panel {
-  flex: 1.2;
   min-width: 0;
+  /* Stretches to fill its full grid column by default (justify-items:
+     stretch), so the card's own background/border reaches the true right
+     edge of the page -- .card's padding (below) keeps the actual content
+     comfortably inset from that edge, evenly on all sides. */
   position: sticky;
   top: var(--space-4);
   display: flex;
@@ -1410,8 +1421,14 @@ a {
     max-width: 95%;
   }
 
+  .app-main-wide {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: var(--space-3);
+  }
+
   .chat-layout {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   .memory-panel {
