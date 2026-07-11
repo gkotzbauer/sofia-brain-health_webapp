@@ -67,7 +67,15 @@ async function attachOpeningTurn(req, session, userId) {
 
     const now = new Date().toISOString();
     const openingLog = [
-      { role: 'assistant', content: turn.reply, timestamp: now, isOpening: true, storyMoment: Boolean(turn.proposed_chapter) }
+      {
+        role: 'assistant',
+        content: turn.reply,
+        timestamp: now,
+        isOpening: true,
+        storyMoment: Boolean(turn.proposed_chapter),
+        quickReplies: turn.quick_replies || null,
+        inlinePicker: turn.inline_picker || null
+      }
     ];
     // No keyword-based safety check runs for the opening turn (there's no
     // real user message to scan), and no clinical alert fires off it --

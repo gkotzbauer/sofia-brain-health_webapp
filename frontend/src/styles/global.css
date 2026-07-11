@@ -464,6 +464,46 @@ a {
   font-style: italic;
 }
 
+/* Facilitation controls -- quick-reply buttons and the inline About Me
+   picker, both shown only for the trailing Sofia message (ChatWindow.tsx).
+   This is the concrete "guided journey" mechanic: at nearly every turn,
+   Sofia offers specific next steps instead of leaving a blank box. */
+
+.quick-replies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-self: flex-start;
+  max-width: 90%;
+}
+
+.quick-reply-btn {
+  text-align: left;
+}
+
+.inline-picker {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.inline-picker-prompt {
+  margin: 0;
+  font-weight: 600;
+}
+
+.inline-picker .toggle-group {
+  margin: var(--space-2) 0;
+}
+
+.inline-picker-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
 .message {
   display: flex;
   gap: var(--space-2);

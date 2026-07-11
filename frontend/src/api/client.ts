@@ -75,6 +75,11 @@ export interface AuthResponse {
   user: SofiaUser;
 }
 
+export interface InlinePicker {
+  type: 'best_life_elements' | 'concerns' | 'confidence_level';
+  prompt: string;
+}
+
 export interface ConversationTurn {
   role: 'user' | 'assistant' | 'clinician';
   content: string;
@@ -82,6 +87,8 @@ export interface ConversationTurn {
   authorName?: string;
   isOpening?: boolean;
   storyMoment?: boolean;
+  quickReplies?: string[] | null;
+  inlinePicker?: InlinePicker | null;
 }
 
 export interface PendingConfirmation {
@@ -123,6 +130,9 @@ export interface ChatTurnResponse {
   reply: string;
   state: ConversationState;
   safety: { riskLevel: string; clinicianNotified: boolean; safetyEventId: string | null };
+  quickReplies?: string[] | null;
+  inlinePicker?: InlinePicker | null;
+  storyMoment?: boolean;
 }
 
 export interface Goal {

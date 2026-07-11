@@ -68,6 +68,21 @@ const SOFIA_TURN_PARAMETERS = {
         choices: { type: 'string' },
         learning: { type: 'string' }
       }
+    },
+    quick_replies: {
+      type: ['array', 'null'],
+      description:
+        "2-4 short, concrete things the person might say or tap next, in their own voice (e.g. \"Tell me more about that\", \"Let's set a goal\", \"Not right now\") -- this is what makes the conversation feel actively facilitated rather than an open blank box. Offer these at nearly every turn where there's a natural next step or choice; omit (null) only for moments that call for open reflection, like sitting with strong emotion.",
+      items: { type: 'string' }
+    },
+    inline_picker: {
+      type: ['object', 'null'],
+      description:
+        'Set this to invite the person to pick from a fixed set of options shown as selectable chips directly in the chat, instead of free text -- used for the structured About Me onboarding. The app supplies the actual option list and does the saving; you only choose which picker to show and the lead-in prompt text.',
+      properties: {
+        type: { type: 'string', enum: ['best_life_elements', 'concerns', 'confidence_level'] },
+        prompt: { type: 'string', description: 'A short lead-in line introducing the picker, shown just above the choices.' }
+      }
     }
   },
   required: ['reply', 'care_phase', 'safety_assessment']

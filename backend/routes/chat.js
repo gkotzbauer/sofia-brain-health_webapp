@@ -192,7 +192,14 @@ router.post('/', chatLimiter, async (req, res) => {
     const newLog = [
       ...existingLog,
       { role: 'user', content: message, timestamp: now },
-      { role: 'assistant', content: turn.reply, timestamp: now, storyMoment: Boolean(turn.proposed_chapter) }
+      {
+        role: 'assistant',
+        content: turn.reply,
+        timestamp: now,
+        storyMoment: Boolean(turn.proposed_chapter),
+        quickReplies: turn.quick_replies || null,
+        inlinePicker: turn.inline_picker || null
+      }
     ];
 
     const mergedState = buildMergedState({
@@ -218,7 +225,10 @@ router.post('/', chatLimiter, async (req, res) => {
     res.json({
       reply: turn.reply,
       state: mergedState,
-      safety: { riskLevel, clinicianNotified, safetyEventId }
+      safety: { riskLevel, clinicianNotified, safetyEventId },
+      quickReplies: turn.quick_replies || null,
+      inlinePicker: turn.inline_picker || null,
+      storyMoment: Boolean(turn.proposed_chapter)
     });
   } catch (error) {
     req.logger.error('Chat orchestration error:', error);

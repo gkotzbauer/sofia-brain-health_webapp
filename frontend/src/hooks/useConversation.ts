@@ -57,7 +57,14 @@ export function useConversation() {
             conversation_log: [
               ...((prev?.conversation_log as SofiaSession['conversation_log']) || []),
               { role: 'user', content: message, timestamp: now },
-              { role: 'assistant', content: response.reply, timestamp: now }
+              {
+                role: 'assistant',
+                content: response.reply,
+                timestamp: now,
+                storyMoment: response.storyMoment,
+                quickReplies: response.quickReplies,
+                inlinePicker: response.inlinePicker
+              }
             ],
             state: response.state
           };

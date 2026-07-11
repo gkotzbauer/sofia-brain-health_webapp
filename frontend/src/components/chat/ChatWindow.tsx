@@ -4,6 +4,8 @@ import { MessageBubble } from './MessageBubble';
 import { MessageInput } from './MessageInput';
 import { SafetyBanner } from './SafetyBanner';
 import { ContextCapNotice } from './ContextCapNotice';
+import { QuickReplies } from './QuickReplies';
+import { InlineAboutMePicker } from './InlineAboutMePicker';
 
 export function ChatWindow() {
   const { messages, sendMessage, isLoading, isSending, error, lastSafety, state } = useConversation();
@@ -12,6 +14,14 @@ export function ChatWindow() {
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages.length]);
+
+  // Facilitation controls (quick-reply buttons, the inline About Me picker)
+  // only ever apply to the trailing message -- once the person replies
+  // (their message becomes the new trailing entry), the previous prompt's
+  // controls naturally stop showing, matching sofia-fixed(4).html's
+  // behavior of only ever offering choices for the latest bot message.
+  const trailingTurn = messages[messages.length - 1];
+  const showFacilitation = trailingTurn?.role === 'assistant' && !isSending;
 
   return (
     <div className="chat-window">
@@ -32,6 +42,12 @@ export function ChatWindow() {
           <p className="chat-status" aria-hidden="true">
             Sofia is thinking...
           </p>
+        )}
+        {showFacilitation && trailingTurn.inlinePicker && (
+          <InlineAboutMePicker picker={trailingTurn.inlinePicker} onSubmit={sendMessage} disabled={isSending} />
+        )}
+        {showFacilitation && !trailingTurn.inlinePicker && trailingTurn.quickReplies && trailingTurn.quickReplies.length > 0 && (
+          <QuickReplies options={trailingTurn.quickReplies} onSelect={sendMessage} disabled={isSending} />
         )}
       </div>
       {state?.contextCapped && <ContextCapNotice contextWindowSize={state.contextWindowSize} />}
