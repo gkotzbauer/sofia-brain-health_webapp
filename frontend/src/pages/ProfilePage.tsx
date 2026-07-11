@@ -11,7 +11,7 @@ export function ProfilePage() {
 
   return (
     <div className="profile-page">
-      <h1>About me</h1>
+      <h1>About Me</h1>
 
       <section className="profile-detail-section" aria-labelledby="display-settings-heading">
         <h2 id="display-settings-heading">Display settings</h2>

@@ -308,7 +308,7 @@ a {
 }
 
 .app-main-wide {
-  max-width: 1500px;
+  max-width: 1100px;
 }
 
 /* Auth pages */
@@ -359,11 +359,10 @@ a {
 /* Chat */
 
 /* Width is handled by .app-main-wide (AppShell.tsx applies it only on this
-   route) -- a three-panel chat + memory-journal + feedback layout (matching
-   sofia-fixed(4).html's .container) needs far more room than the app's
-   default 720px page shell. The page's own <h1> is folded into .chat-hero
-   (below) rather than a separate plain heading, matching the reference's
-   gradient banner. */
+   route) -- a two-panel chat + memory-journal layout needs more room than
+   the app's default 720px page shell. The page's own <h1> is folded into
+   .chat-hero (below) rather than a separate plain heading, matching
+   sofia-fixed(4).html's gradient banner. */
 .chat-layout {
   display: flex;
   align-items: flex-start;
@@ -479,30 +478,19 @@ a {
   padding-left: var(--space-4);
 }
 
+/* Feedback page (its own route, pages/FeedbackPage.tsx -- not part of the
+   chat layout) */
+
+.feedback-page h1 {
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--space-2);
+}
+
 .feedback-panel {
-  flex: 1;
-  min-width: 0;
-  position: sticky;
-  top: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-
-@media (max-width: 1200px) {
-  .chat-layout {
-    flex-wrap: wrap;
-  }
-
-  .feedback-panel {
-    flex-basis: 100%;
-    position: static;
-  }
-}
-
-.feedback-panel h2 {
-  font-size: var(--font-size-lg);
-  margin: 0;
+  margin-top: var(--space-4);
 }
 
 .feedback-panel form {
@@ -1426,8 +1414,7 @@ a {
     flex-direction: column;
   }
 
-  .memory-panel,
-  .feedback-panel {
+  .memory-panel {
     position: static;
     max-height: none;
     width: 100%;

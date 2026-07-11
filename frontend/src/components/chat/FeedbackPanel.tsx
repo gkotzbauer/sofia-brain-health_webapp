@@ -2,11 +2,10 @@ import { FormEvent, useState } from 'react';
 import { useConversation } from '../../hooks/useConversation';
 import { useFeedback } from '../../hooks/useFeedback';
 
-// Third column of the chat layout, matching sofia-fixed(4).html's
-// "Share Your Thoughts" panel -- a lightweight, always-available way to
-// tell us how the conversation is going, separate from anything Sofia
-// herself tracks. Posts to the existing backend feedback endpoint
-// (previously unused by the frontend).
+// Rendered on its own page (pages/FeedbackPage.tsx) -- a lightweight,
+// always-available way to tell us how the conversation is going, separate
+// from anything Sofia herself tracks. Posts to the existing backend
+// feedback endpoint (previously unused by the frontend).
 export function FeedbackPanel() {
   const { sessionId } = useConversation();
   const { submitFeedback, isSubmitting, submitError } = useFeedback();
@@ -23,8 +22,7 @@ export function FeedbackPanel() {
   }
 
   return (
-    <aside className="feedback-panel card" aria-label="Share your thoughts">
-      <h2>Share your thoughts</h2>
+    <div className="feedback-panel">
       <p className="section-intro">How was this conversation? Any suggestions help us improve.</p>
 
       <form onSubmit={handleSubmit}>
@@ -58,6 +56,6 @@ export function FeedbackPanel() {
           ))}
         </div>
       )}
-    </aside>
+    </div>
   );
 }

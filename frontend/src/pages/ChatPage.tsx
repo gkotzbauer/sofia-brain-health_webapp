@@ -1,6 +1,5 @@
 import { ChatWindow } from '../components/chat/ChatWindow';
 import { MemoryJournalPanel } from '../components/chat/MemoryJournalPanel';
-import { FeedbackPanel } from '../components/chat/FeedbackPanel';
 
 export function ChatPage() {
   return (
@@ -10,7 +9,6 @@ export function ChatPage() {
           <ChatWindow />
         </div>
         <MemoryJournalPanel />
-        <FeedbackPanel />
       </div>
       <p className="safety-indicator" role="status">
         <span aria-hidden="true">🛡️</span> Your conversation is monitored for safety
