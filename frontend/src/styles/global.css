@@ -307,6 +307,10 @@ a {
   padding: var(--space-5);
 }
 
+.app-main-wide {
+  max-width: 1500px;
+}
+
 /* Auth pages */
 
 .auth-page h1 {
@@ -354,20 +358,12 @@ a {
 
 /* Chat */
 
-.chat-page h1 {
-  font-size: var(--font-size-xl);
-  margin-bottom: var(--space-4);
-}
-
-/* The chat route needs more room than the app's default 720px page shell to
-   fit a two-panel chat + memory-journal layout (inspired by
-   sofia-enhanced-narrative.html) -- widened just for this page rather than
-   changing .app-main globally. */
-.chat-page {
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
+/* Width is handled by .app-main-wide (AppShell.tsx applies it only on this
+   route) -- a three-panel chat + memory-journal + feedback layout (matching
+   sofia-fixed(4).html's .container) needs far more room than the app's
+   default 720px page shell. The page's own <h1> is folded into .chat-hero
+   (below) rather than a separate plain heading, matching the reference's
+   gradient banner. */
 .chat-layout {
   display: flex;
   align-items: flex-start;
@@ -439,14 +435,152 @@ a {
   margin: 0;
 }
 
-.chat-window {
+.memory-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+.memory-stat {
+  text-align: center;
+  flex: 1;
+}
+
+.memory-stat dt {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.memory-stat dd {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.about-me-summary-card {
+  background: var(--color-surface-muted);
+  border-left: 4px solid var(--color-success);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+.about-me-summary-card h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-success);
+}
+
+.about-me-summary-card ul {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.feedback-panel {
+  flex: 1;
+  min-width: 0;
+  position: sticky;
+  top: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+@media (max-width: 1200px) {
+  .chat-layout {
+    flex-wrap: wrap;
+  }
+
+  .feedback-panel {
+    flex-basis: 100%;
+    position: static;
+  }
+}
+
+.feedback-panel h2 {
+  font-size: var(--font-size-lg);
+  margin: 0;
+}
+
+.feedback-panel form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.feedback-panel textarea {
+  min-height: calc(var(--touch-target) * 2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  resize: vertical;
+}
+
+.feedback-log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.feedback-confirmation {
+  background: var(--color-story-moment-bg);
+  border-left: 3px solid var(--color-success);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  color: var(--color-warning-text);
+}
+
+.safety-indicator {
+  position: fixed;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  border-radius: 20px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-primary-dark);
+  z-index: 40;
+  margin: var(--space-4) 0 0;
+}
+
+.chat-window {
+  display: flex;
+  flex-direction: column;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.chat-hero {
+  background: var(--gradient-hero);
+  color: #ffffff;
+  padding: var(--space-4) var(--space-5);
+  text-align: center;
+}
+
+.chat-hero h1 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-xl);
+}
+
+.chat-hero p {
+  margin: 0;
+  opacity: 0.9;
+  font-size: var(--font-size-sm);
+}
+
+.chat-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   padding: var(--space-4);
 }
 
@@ -1292,7 +1426,8 @@ a {
     flex-direction: column;
   }
 
-  .memory-panel {
+  .memory-panel,
+  .feedback-panel {
     position: static;
     max-height: none;
     width: 100%;
@@ -1439,10 +1574,17 @@ a {
   margin-top: 0;
 }
 
-.danger-button {
+/* Pre-existing specificity bug, only now visible: .auth-form button (one
+   class + one element = 0,1,1) outranks a bare .danger-button (0,1,0), so
+   this always silently rendered with the primary color, never actually
+   red -- .danger-zone .danger-button (0,2,0) reliably wins instead. */
+.danger-zone .danger-button {
   margin-top: var(--space-4);
   background: var(--color-danger);
-  color: var(--color-primary-contrast);
+  /* Not --color-primary-contrast -- that token is tuned for the
+     indigo-violet primary specifically and reads poorly against
+     --color-danger's very different lightness in both themes. */
+  color: var(--color-danger-contrast);
   border-color: var(--color-danger);
   font-weight: 600;
 }

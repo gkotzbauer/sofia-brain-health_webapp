@@ -268,6 +268,13 @@ export interface EducationTopicItem {
   [key: string]: unknown;
 }
 
+export interface FeedbackItem {
+  id: string;
+  feedback_text: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
 export interface ClinicalAlert {
   id: string;
   user_id: string;
@@ -347,6 +354,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
+
+  submitFeedback: (data: { sessionId?: string; feedbackText: string }) =>
+    request<FeedbackItem>('/feedback', { method: 'POST', body: JSON.stringify(data) }),
 
   listPendingClinicalAlerts: () => request<ClinicalAlert[]>('/admin/clinical-alerts/pending'),
   acknowledgeClinicalAlert: (alertId: string) =>

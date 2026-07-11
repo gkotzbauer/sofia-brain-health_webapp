@@ -143,9 +143,46 @@ export function MemoryJournalPanel() {
 
   const filtered = (filter === 'all' ? items : items.filter((item) => item.filterKey === filter)).slice(0, MAX_ITEMS);
 
+  const bestLifeElements = profile?.aboutMe?.best_life_elements || [];
+  const aboutMeConcerns = profile?.aboutMe?.concerns || [];
+  const activeGoalsCount = goals.filter((goal) => goal.status === 'active').length;
+
   return (
     <aside className="memory-panel card" aria-label="Your story journal">
-      <h2>Your story journal</h2>
+      <div>
+        <h2>📖 Your story journal</h2>
+        <p className="section-intro">Your brain health journey, captured in chapters.</p>
+      </div>
+
+      {(bestLifeElements.length > 0 || aboutMeConcerns.length > 0) && (
+        <div className="about-me-summary-card">
+          <h3>💚 What matters most to you</h3>
+          <ul>
+            {bestLifeElements.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+            {aboutMeConcerns.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <dl className="memory-stats">
+        <div className="memory-stat">
+          <dt>Active goals</dt>
+          <dd>{activeGoalsCount}</dd>
+        </div>
+        <div className="memory-stat">
+          <dt>Story chapters</dt>
+          <dd>{profile?.storyChapters?.length || 0}</dd>
+        </div>
+        <div className="memory-stat">
+          <dt>Topics explored</dt>
+          <dd>{topics.length}</dd>
+        </div>
+      </dl>
+
       <div className="memory-filter-row" role="group" aria-label="Filter your story journal">
         {FILTERS.map((option) => (
           <button
