@@ -6,9 +6,10 @@ import { SafetyBanner } from './SafetyBanner';
 import { ContextCapNotice } from './ContextCapNotice';
 import { QuickReplies } from './QuickReplies';
 import { InlineAboutMePicker } from './InlineAboutMePicker';
+import { InlinePendingConfirmation } from './InlinePendingConfirmation';
 
 export function ChatWindow() {
-  const { messages, sendMessage, isLoading, isSending, error, lastSafety, state } = useConversation();
+  const { messages, sendMessage, isLoading, isSending, error, lastSafety, state, connectFailed, retryConnect } = useConversation();
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,12 +33,29 @@ export function ChatWindow() {
       <div className="chat-body">
         <div className="chat-log" ref={logRef} aria-live="polite" aria-relevant="additions">
           {isLoading && messages.length === 0 && <p className="chat-status">Sofia is getting ready...</p>}
+          {/* Session creation failed even after automatic retries (see
+              useConversation.ts's createSession mutation) -- e.g. a network
+              blip, or the backend waking from a Render free-tier cold
+              start. Distinct from the loading state above and from the
+              gentler fallback below, which only shows once we're actually
+              connected but the opening turn itself came back empty. */}
+          {connectFailed && messages.length === 0 && (
+            <div className="chat-status connect-error">
+              <p role="alert">
+                Sofia's having trouble connecting right now. This can happen if the server's just waking up -- it usually
+                only takes a moment.
+              </p>
+              <button type="button" className="button-secondary" onClick={retryConnect}>
+                Try again
+              </button>
+            </div>
+          )}
           {/* Sofia normally speaks first -- her opening turn is generated
               server-side when the session is created (routes/sessions.js) and
-              arrives as a real message in `messages`. This only shows if that
-              generation failed (e.g. the LLM call errored) and the session
-              genuinely has no messages yet. */}
-          {!isLoading && messages.length === 0 && (
+              arrives as a real message in `messages`. This only shows once
+              we're genuinely connected and that generation came back empty
+              (e.g. the LLM provider isn't configured server-side yet). */}
+          {!isLoading && !connectFailed && messages.length === 0 && (
             <p className="chat-status">Hello, I'm Sofia. Whenever you're ready, tell me what's on your mind.</p>
           )}
           {messages.map((turn, index) => (
@@ -48,12 +66,22 @@ export function ChatWindow() {
               Sofia is thinking...
             </p>
           )}
-          {showFacilitation && trailingTurn.inlinePicker && (
+          {/* Priority: a concrete proposal to confirm outranks the About Me
+              picker, which outranks plain quick replies -- all three are
+              mutually exclusive, trailing-turn-only facilitation controls. */}
+          {showFacilitation && state?.pendingConfirmation && (
+            <InlinePendingConfirmation confirmation={state.pendingConfirmation} onSave={sendMessage} disabled={isSending} />
+          )}
+          {showFacilitation && !state?.pendingConfirmation && trailingTurn.inlinePicker && (
             <InlineAboutMePicker picker={trailingTurn.inlinePicker} onSubmit={sendMessage} disabled={isSending} />
           )}
-          {showFacilitation && !trailingTurn.inlinePicker && trailingTurn.quickReplies && trailingTurn.quickReplies.length > 0 && (
-            <QuickReplies options={trailingTurn.quickReplies} onSelect={sendMessage} disabled={isSending} />
-          )}
+          {showFacilitation &&
+            !state?.pendingConfirmation &&
+            !trailingTurn.inlinePicker &&
+            trailingTurn.quickReplies &&
+            trailingTurn.quickReplies.length > 0 && (
+              <QuickReplies options={trailingTurn.quickReplies} onSelect={sendMessage} disabled={isSending} />
+            )}
         </div>
         {state?.contextCapped && <ContextCapNotice contextWindowSize={state.contextWindowSize} />}
         {lastSafety && <SafetyBanner riskLevel={lastSafety.riskLevel} clinicianNotified={lastSafety.clinicianNotified} />}

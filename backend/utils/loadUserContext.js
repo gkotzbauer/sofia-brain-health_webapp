@@ -7,15 +7,19 @@
 const { decryptJSON, decryptField } = require('./phiCrypto');
 
 async function loadUserContext(pool, userId) {
-  const [aboutMeResult, goalsResult, chaptersResult, documentsResult] = await Promise.all([
-    pool.query('SELECT * FROM about_me_profiles WHERE user_id = $1', [userId]),
-    pool.query('SELECT * FROM goals WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
-    pool.query('SELECT * FROM story_chapters WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5', [userId]),
-    pool.query(
-      'SELECT filename, metadata FROM document_uploads WHERE user_id = $1 ORDER BY upload_timestamp DESC LIMIT 3',
-      [userId]
-    )
-  ]);
+  const [aboutMeResult, goalsResult, chaptersResult, documentsResult, valuesResult, concernsResult, educationTopicsResult] =
+    await Promise.all([
+      pool.query('SELECT * FROM about_me_profiles WHERE user_id = $1', [userId]),
+      pool.query('SELECT * FROM goals WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+      pool.query('SELECT * FROM story_chapters WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5', [userId]),
+      pool.query(
+        'SELECT filename, metadata FROM document_uploads WHERE user_id = $1 ORDER BY upload_timestamp DESC LIMIT 3',
+        [userId]
+      ),
+      pool.query('SELECT * FROM values WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+      pool.query('SELECT * FROM concerns WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+      pool.query('SELECT * FROM education_topics WHERE user_id = $1 ORDER BY created_at DESC', [userId])
+    ]);
 
   const aboutMeRow = aboutMeResult.rows[0];
   const aboutMe = aboutMeRow
@@ -31,9 +35,12 @@ async function loadUserContext(pool, userId) {
     const metadata = decryptJSON(row.metadata) || {};
     return { filename: row.filename, extractedText: metadata.extractedText || '' };
   });
+  const values = valuesResult.rows.map((value) => ({ ...value, value_text: decryptField(value.value_text) }));
+  const concerns = concernsResult.rows.map((concern) => ({ ...concern, concern: decryptField(concern.concern) }));
+  const educationTopics = educationTopicsResult.rows.map((topic) => ({ ...topic, topic: decryptField(topic.topic) }));
   const profileCompleteness = aboutMeRow?.profile_completeness ?? 0;
 
-  return { aboutMe, goals, chapters, documents, profileCompleteness };
+  return { aboutMe, goals, chapters, documents, values, concerns, educationTopics, profileCompleteness };
 }
 
 module.exports = { loadUserContext };

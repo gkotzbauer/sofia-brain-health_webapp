@@ -24,11 +24,20 @@ function buildMergedState({
     contextCapped: isContextCapped,
     contextWindowSize,
     contextCapLastAlertedAt,
+    // First non-null wins -- one proposal at a time, kept simple. The model
+    // is instructed (see utils/systemPrompt.js) not to stack several
+    // proposals in a single turn anyway.
     pendingConfirmation: turn.proposed_goal
       ? { type: 'goal', payload: turn.proposed_goal }
       : turn.proposed_chapter
         ? { type: 'chapter', payload: turn.proposed_chapter }
-        : null,
+        : turn.proposed_value
+          ? { type: 'value', payload: turn.proposed_value }
+          : turn.proposed_concern_detail
+            ? { type: 'concern', payload: turn.proposed_concern_detail }
+            : turn.proposed_education_topic
+              ? { type: 'education_topic', payload: turn.proposed_education_topic }
+              : null,
     pivotHistory: [
       ...(existingState.pivotHistory || []),
       ...(turn.pivot ? [{ type: turn.pivot.type, turnIndex: turnCount }] : [])

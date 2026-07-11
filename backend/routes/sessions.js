@@ -50,7 +50,8 @@ async function attachOpeningTurn(req, session, userId) {
     const previousTail = previousLog.length ? previousLog.slice(-PREVIOUS_TAIL_LIMIT) : null;
     const previousCarePhase = previousSession?.state?.carePhase || null;
 
-    const { aboutMe, goals, chapters, documents, profileCompleteness } = await loadUserContext(req.pool, userId);
+    const { aboutMe, goals, chapters, documents, values, concerns, educationTopics, profileCompleteness } =
+      await loadUserContext(req.pool, userId);
 
     const systemBlocks = buildSystemPrompt({
       user: req.user,
@@ -58,6 +59,9 @@ async function attachOpeningTurn(req, session, userId) {
       goals,
       chapters,
       documents,
+      values,
+      concerns,
+      educationTopics,
       state: {},
       profileCompleteness,
       opening: {

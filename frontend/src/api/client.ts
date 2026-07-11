@@ -92,7 +92,7 @@ export interface ConversationTurn {
 }
 
 export interface PendingConfirmation {
-  type: 'goal' | 'chapter';
+  type: 'goal' | 'chapter' | 'value' | 'concern' | 'education_topic';
   payload: Record<string, unknown>;
 }
 

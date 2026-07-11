@@ -8,7 +8,7 @@
 const SOFIA_TURN_TOOL_NAME = 'sofia_turn_response';
 
 const SOFIA_TURN_TOOL_DESCRIPTION =
-  "Sofia's next conversational turn, plus structured tracking of CARE phase, education tier, adaptive pattern, any pivot, a safety assessment, and any goal/chapter the user is proposing to save.";
+  "Sofia's next conversational turn, plus structured tracking of CARE phase, education tier, adaptive pattern, any pivot, a safety assessment, and any goal/chapter/value/concern/education-topic the user is proposing to save.";
 
 const SOFIA_TURN_PARAMETERS = {
   type: 'object',
@@ -67,6 +67,34 @@ const SOFIA_TURN_PARAMETERS = {
         moodArc: { type: 'array', items: { type: 'string' } },
         choices: { type: 'string' },
         learning: { type: 'string' }
+      }
+    },
+    proposed_value: {
+      type: ['object', 'null'],
+      description:
+        'Only set when the person has expressed a personal value worth saving to their profile (e.g. "I really want to stay independent") -- never assume it is saved.',
+      properties: {
+        text: { type: 'string' },
+        importance: { type: 'string', enum: ['high', 'medium', 'low'] }
+      }
+    },
+    proposed_concern_detail: {
+      type: ['object', 'null'],
+      description:
+        'Only set when the person has expressed a specific worry worth saving to their profile, with enough detail to be more than a one-line concern -- never assume it is saved.',
+      properties: {
+        text: { type: 'string' },
+        severity: { type: 'string', enum: ['mild', 'moderate', 'severe'] },
+        context: { type: 'string' }
+      }
+    },
+    proposed_education_topic: {
+      type: ['object', 'null'],
+      description:
+        'Only set when the person has shown curiosity about a specific topic worth tracking as something to teach them more about -- never assume it is saved.',
+      properties: {
+        text: { type: 'string' },
+        engagement: { type: 'string', enum: ['low', 'moderate', 'high'] }
       }
     },
     quick_replies: {

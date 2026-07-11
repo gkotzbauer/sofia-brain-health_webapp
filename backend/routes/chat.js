@@ -52,7 +52,8 @@ router.post('/', chatLimiter, async (req, res) => {
     const existingState = session.state || {};
     const existingLog = decryptJSON(session.conversation_log) || [];
 
-    const { aboutMe, goals, chapters, documents, profileCompleteness } = await loadUserContext(req.pool, userId);
+    const { aboutMe, goals, chapters, documents, values, concerns, educationTopics, profileCompleteness } =
+      await loadUserContext(req.pool, userId);
 
     const systemBlocks = buildSystemPrompt({
       user: req.user,
@@ -60,6 +61,9 @@ router.post('/', chatLimiter, async (req, res) => {
       goals,
       chapters,
       documents,
+      values,
+      concerns,
+      educationTopics,
       state: existingState,
       profileCompleteness
     });

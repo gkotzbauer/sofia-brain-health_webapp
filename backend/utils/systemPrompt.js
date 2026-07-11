@@ -147,6 +147,23 @@ it into a story chapter (a title, the moment itself, the emotional arc, any
 choices made, and what they learned) via proposed_chapter. Like goals, this
 is only ever a proposal the person must confirm.
 
+## Values, concerns, and things to learn about:
+Beyond the best-life-elements/concerns/confidence-level checklist covered by
+inline_picker, the person's profile has three more places to capture what
+you learn about them in ordinary conversation -- their personal values, more
+detailed concerns (with severity and context, richer than the checklist
+entry), and topics they're curious to learn more about. When they express
+one of these naturally -- e.g. "I really want to stay independent" (a
+value), a specific worry with real detail behind it (a concern), or
+curiosity about a subject (an education topic) -- propose saving it via
+proposed_value / proposed_concern_detail / proposed_education_topic. Same
+rule as goals and chapters: only ever a proposal, never assumed saved, and
+only one proposal per turn (if more than one applies, pick the most
+salient). Check "Profile status" below for what's already recorded so you
+don't propose the same thing twice, and don't force these into a
+conversation that isn't naturally going there -- this is about capturing
+what comes up organically, not running a checklist.
+
 ## Documents shared with you:
 If the person has uploaded documents (e.g. lab results, a clinician's
 summary), excerpts appear below under "Documents on file". Use them to
@@ -196,12 +213,28 @@ function formatDocuments(documents) {
 // document. Sparse = below 40/100 (see routes/users.js calculateCompleteness).
 // Only nudges early in the relationship, and only once per state.profilePromptedAt
 // (see utils/turnState.js) -- a soft, one-time invitation, not a checklist demand.
-function formatProfileStatus(profileCompleteness, aboutMe, turnCount, alreadyPrompted) {
+// profileCompleteness itself only scores the best_life_elements/concerns/
+// confidence_level checklist (see routes/users.js calculateCompleteness) --
+// values/concerns/educationTopics counts are reported alongside it so the
+// model can see (and propose against) the full About Me page, not just
+// that checklist.
+function formatProfileStatus(profileCompleteness, aboutMe, turnCount, alreadyPrompted, values, concerns, educationTopics) {
   const bestCount = aboutMe?.best_life_elements?.length || 0;
   const concernCount = aboutMe?.concerns?.length || 0;
   const confidenceSet = Boolean(aboutMe?.confidence_level);
   const lines = [
-    `- Profile completeness: ${profileCompleteness}/100 (best-life elements: ${bestCount} recorded, concerns: ${concernCount} recorded, confidence level: ${confidenceSet ? 'set' : 'not set'}).`
+    `- Profile completeness: ${profileCompleteness}/100 (best-life elements: ${bestCount} recorded, concerns: ${concernCount} recorded, confidence level: ${confidenceSet ? 'set' : 'not set'}).`,
+    `- Beyond that checklist: ${values?.length || 0} value(s), ${concerns?.length || 0} detailed concern(s), ${educationTopics?.length || 0} learning topic(s) recorded so far${
+      values?.length || concerns?.length || educationTopics?.length
+        ? ` (${[
+            values?.length ? `values: ${values.map((v) => `"${v.value_text}"`).join(', ')}` : null,
+            concerns?.length ? `concerns: ${concerns.map((c) => `"${c.concern}"`).join(', ')}` : null,
+            educationTopics?.length ? `topics: ${educationTopics.map((t) => `"${t.topic}"`).join(', ')}` : null
+          ]
+            .filter(Boolean)
+            .join('; ')})`
+        : ''
+    }.`
   ];
 
   const isSparse = profileCompleteness < 40;
@@ -281,7 +314,19 @@ ${tailText ? `\n## What you discussed last time (their previous session's final 
 // the small per-user dynamic section -- which changes every turn -- stays
 // outside the cached prefix. See routes/chat.js, which passes this array
 // directly as the `system` param.
-function buildSystemPrompt({ user, aboutMe, goals, chapters, documents, state, profileCompleteness = 0, opening = null }) {
+function buildSystemPrompt({
+  user,
+  aboutMe,
+  goals,
+  chapters,
+  documents,
+  values,
+  concerns,
+  educationTopics,
+  state,
+  profileCompleteness = 0,
+  opening = null
+}) {
   const activeGoals = (goals || []).filter((goal) => goal.status === 'active');
   const recentChapters = (chapters || []).slice(0, 3);
 
@@ -304,7 +349,7 @@ function buildSystemPrompt({ user, aboutMe, goals, chapters, documents, state, p
   }
 
 ## Profile status:
-${formatProfileStatus(profileCompleteness, aboutMe, state?.turnCount, Boolean(state?.profilePromptedAt))}
+${formatProfileStatus(profileCompleteness, aboutMe, state?.turnCount, Boolean(state?.profilePromptedAt), values, concerns, educationTopics)}
 
 ## Documents on file:
 ${formatDocuments(documents)}
