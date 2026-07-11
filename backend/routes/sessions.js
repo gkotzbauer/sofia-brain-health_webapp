@@ -8,6 +8,10 @@ const { MAX_CONTEXT_MESSAGES } = require('../utils/chatConfig');
 const llm = require('../utils/llm');
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+// How many of the previous session's final messages to hand the model for
+// "what we discussed last time" continuity -- enough for a real recap
+// without ballooning the opening turn's token cost.
+const PREVIOUS_TAIL_LIMIT = 6;
 
 function greetingBucketFor(daysSinceLastSession) {
   if (daysSinceLastSession <= 0) return 'returningToday';
@@ -27,7 +31,7 @@ async function attachOpeningTurn(req, session, userId) {
 
   try {
     const previousResult = await req.pool.query(
-      `SELECT session_date FROM sessions WHERE user_id = $1 AND id != $2 ORDER BY session_date DESC LIMIT 1`,
+      `SELECT session_date, conversation_log, state FROM sessions WHERE user_id = $1 AND id != $2 ORDER BY session_date DESC LIMIT 1`,
       [userId, session.id]
     );
     const previousSession = previousResult.rows[0];
@@ -36,9 +40,17 @@ async function attachOpeningTurn(req, session, userId) {
       ? null
       : Math.floor((Date.now() - new Date(previousSession.session_date).getTime()) / MS_PER_DAY);
     const greetingBucket = isFirstTime ? null : greetingBucketFor(daysSinceLastSession);
+    // The tail of the previous session's actual transcript -- lets the
+    // opening turn genuinely summarize "what we discussed last time" and
+    // "where we left off" instead of only referencing an isolated goal/
+    // concern. Goals/chapters/etc. are already fully available via the
+    // regular "This person, right now" section below (see loadUserContext),
+    // so this is specifically for conversational continuity.
+    const previousLog = previousSession ? decryptJSON(previousSession.conversation_log) || [] : [];
+    const previousTail = previousLog.length ? previousLog.slice(-PREVIOUS_TAIL_LIMIT) : null;
+    const previousCarePhase = previousSession?.state?.carePhase || null;
 
     const { aboutMe, goals, chapters, documents, profileCompleteness } = await loadUserContext(req.pool, userId);
-    const activeGoals = (goals || []).filter((goal) => goal.status === 'active');
 
     const systemBlocks = buildSystemPrompt({
       user: req.user,
@@ -52,8 +64,8 @@ async function attachOpeningTurn(req, session, userId) {
         isFirstTime,
         greetingBucket,
         daysSinceLastSession,
-        lastGoal: activeGoals[0]?.goal || null,
-        lastConcern: aboutMe?.concerns?.[0] || null
+        previousTail,
+        previousCarePhase
       }
     });
 

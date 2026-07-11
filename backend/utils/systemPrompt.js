@@ -218,30 +218,60 @@ function formatProfileStatus(profileCompleteness, aboutMe, turnCount, alreadyPro
   return lines.join('\n');
 }
 
+function firstNameOf(fullName) {
+  if (!fullName) return null;
+  return fullName.trim().split(/\s+/)[0];
+}
+
+const PREVIOUS_TAIL_CHAR_CAP = 400;
+
+// Renders the previous session's final few turns as a compact readable
+// transcript so the opening turn can genuinely summarize "what we discussed
+// last time," not just gesture at an isolated goal/concern.
+function formatPreviousTail(previousTail) {
+  if (!previousTail || previousTail.length === 0) return null;
+  return previousTail
+    .map((turn) => {
+      const speaker = turn.role === 'user' ? 'Them' : turn.role === 'clinician' ? 'Care team' : 'You';
+      const content = (turn.content || '').slice(0, PREVIOUS_TAIL_CHAR_CAP);
+      return `${speaker}: ${content}`;
+    })
+    .join('\n');
+}
+
 // The proactive "Sofia speaks first" opening, keyed off how long it's been
 // since this person's last session (see routes/sessions.js). Only present
 // when this turn is a session-opening turn (see buildSystemPrompt below).
-function formatOpening(opening) {
-  const { isFirstTime, greetingBucket, daysSinceLastSession, lastGoal, lastConcern } = opening;
+// This is deliberately prescriptive (not just "consider mentioning...") --
+// greeting by name, stating recognition status plainly, and offering a
+// concrete way to start/continue are the actual behaviors being asked for,
+// not optional flavor.
+function formatOpening(opening, fullName) {
+  const { isFirstTime, greetingBucket, daysSinceLastSession, previousTail, previousCarePhase } = opening;
+  const firstName = firstNameOf(fullName) || 'there';
 
   const bucketText = isFirstTime
-    ? "This is this person's very first conversation with you."
+    ? "This is this person's very first conversation with you -- you have no memory of them, and you must not pretend otherwise."
     : greetingBucket === 'returningToday'
       ? 'They were just here earlier today.'
       : greetingBucket === 'returningRecent'
         ? `They were last here ${daysSinceLastSession} day${daysSinceLastSession === 1 ? '' : 's'} ago.`
         : `It's been a while -- ${daysSinceLastSession} days since they were last here.`;
 
-  const referenceParts = [];
-  if (lastGoal) referenceParts.push(`their goal "${lastGoal}"`);
-  if (lastConcern) referenceParts.push(`their concern "${lastConcern}"`);
-  const referenceText = !isFirstTime && referenceParts.length
-    ? ` Consider referencing something specific and recent, like ${referenceParts.join(' or ')}.`
-    : '';
+  const tailText = formatPreviousTail(previousTail);
+
+  const firstTimeInstructions = `
+Since this is a first meeting, your reply must: (1) greet them by name -- "${firstName}"; (2) briefly introduce yourself: that you're Sofia, a Cognitive Care Companion, and in a sentence, why you exist (here to help them build toward better brain health, at their pace, in their own words -- not a clinical tool); (3) set quick_replies to a short menu of concrete ways to begin -- something like starting a quest toward better brain health, learning about a specific topic, working out a personal goal, or just talking about what's on their mind (phrase these naturally in their voice, they don't need to match exactly). Do not use inline_picker on this very first turn -- let them choose a starting direction before you ask about their profile.`.trim();
+
+  const returningInstructions = `
+Since you've talked before, your reply must: (1) greet them by name -- "${firstName}"; (2) explicitly say that you remember them -- state it plainly (e.g. "good to see you again" / "welcome back"), don't just imply it through tone; (3) briefly summarize, in a sentence or two and in your own words (not a transcript dump), what you two were working on or discussing last time${tailText ? ' -- see "What you discussed last time" below' : ", drawing on their current goals/profile below since there's no specific transcript to reference"}; (4) explicitly offer, via quick_replies, the choice to continue that thread or start something new -- e.g. "Continue where we left off" and "Start something new" (add a third option if something specific stands out, like checking in on a particular goal).`.trim();
 
   return `
 ## Session opening:
-This is a session-opening turn -- there is no real user message yet (the one message you see below is only a placeholder marking that the session started; ignore its literal content, do not respond to it as if it were something the person said). ${bucketText}${referenceText} Generate a warm, natural greeting appropriate to this -- speak first, don't wait to be addressed. ${isFirstTime ? "Since this is a first meeting, briefly introduce yourself (who Sofia is, what a Cognitive Care Companion does) before inviting them to share what's on their mind." : ''}
+This is a session-opening turn -- there is no real user message yet (the one message you see below is only a placeholder marking that the session started; ignore its literal content, do not respond to it as if it were something the person said). ${bucketText} Generate a warm, natural greeting -- speak first, don't wait to be addressed.
+
+${isFirstTime ? firstTimeInstructions : returningInstructions}
+${tailText ? `\n## What you discussed last time (their previous session's final messages, most recent last -- summarize this, don't recite it verbatim):\n${tailText}\nWhat you were focused on then: ${previousCarePhase || 'unclear'}.` : ''}
 `.trim();
 }
 
@@ -257,7 +287,7 @@ function buildSystemPrompt({ user, aboutMe, goals, chapters, documents, state, p
 
   const dynamicSection = `
 ## This person, right now:
-- Name: ${user?.name || 'unknown'}
+- Name: ${user?.name || 'unknown'} -- address them by first name ("${firstNameOf(user?.name) || 'there'}"), not their full name.
 - Age: ${ageRangeLabel(user?.age)}
 - What makes life meaningful to them (best-life elements): ${formatList(aboutMe?.best_life_elements)}
 - Stated concerns: ${formatList(aboutMe?.concerns)}
@@ -286,7 +316,7 @@ ${formatDocuments(documents)}
 - Turn count this session: ${state?.turnCount ?? 0}
 - Recent pivots: ${state?.pivotHistory?.length ? state.pivotHistory.map((p) => p.type).join(', ') : 'none'}
 - Recent safety flags: ${state?.safetyFlags?.length ? state.safetyFlags.map((f) => `${f.triggerType || 'none'}/${f.severity}`).join(', ') : 'none'}
-${opening ? `\n${formatOpening(opening)}` : ''}
+${opening ? `\n${formatOpening(opening, user?.name)}` : ''}
 `.trim();
 
   return [
