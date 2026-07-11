@@ -31,7 +31,9 @@ const INACTIVE_ACCOUNT_PURGE_DAYS = process.env.INACTIVE_ACCOUNT_PURGE_DAYS
 async function purgeRetention() {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false
+    // See the matching comment in server.js -- defaults to false because
+    // Render's managed Postgres presents a self-signed cert internally.
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true' } : false
   });
 
   try {

@@ -10,7 +10,11 @@ require('dotenv').config();
 async function migrate() {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false
+    // See the matching comment in server.js -- Render's managed Postgres
+    // presents a self-signed cert on its internal network, so this must
+    // default to false there. DB_SSL_REJECT_UNAUTHORIZED=true opts in to
+    // strict verification on hosts with a real CA-signed DB certificate.
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true' } : false
   });
 
   try {

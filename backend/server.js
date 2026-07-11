@@ -45,21 +45,38 @@ let pool = null;
 if (process.env.DATABASE_URL) {
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false
+    // Managed Postgres on providers like Render is reached over their own
+    // private network and commonly presents a self-signed certificate for
+    // that internal connection -- rejectUnauthorized: true fails outright
+    // there (DEPTH_ZERO_SELF_SIGNED_CERT), even though the connection is
+    // still encrypted. Default to false (matches Render); set
+    // DB_SSL_REJECT_UNAUTHORIZED=true if hosting somewhere with a properly
+    // CA-signed DB certificate and real MITM protection is wanted.
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true' } : false
   });
 
-  // Pool error handling
-  pool.on('error', (err, client) => {
+  // Pool error handling -- fires on background/idle-client errors, not on
+  // every failed query (those are handled per-request by each route's own
+  // try/catch). A hard exit here is appropriate: an idle-client error
+  // usually means the pool itself is in a bad state.
+  pool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
     process.exit(-1);
   });
 
-  // Test database connection
+  // Log connectivity at startup for operator visibility -- but do NOT null
+  // out `pool` on failure. This used to permanently disable the database
+  // for the life of the process if this one-shot test connection failed
+  // for any reason, including a purely transient one (e.g. the database
+  // still coming up when this process starts) -- turning every future
+  // request into a 500 with no recovery, even after the database became
+  // reachable seconds later. pg's Pool already acquires a connection fresh
+  // per query and handles retries/errors at that level; there's no need to
+  // gate all future queries behind whether this one test connection
+  // happened to succeed.
   pool.connect((err, client, done) => {
     if (err) {
-      console.error('Database connection error:', err.stack);
-      console.log('Running in test mode without database...');
-      pool = null; // Clear the failed pool
+      console.error('Initial database connectivity check failed (queries will still be retried per-request):', err.stack);
     } else {
       console.log('Database connected successfully');
       done();

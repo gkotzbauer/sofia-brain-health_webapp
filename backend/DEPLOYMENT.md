@@ -5,6 +5,9 @@
 ```bash
 # Database
 DATABASE_URL=postgresql://username:password@host:port/database_name
+# Leave DB_SSL_REJECT_UNAUTHORIZED unset on Render -- its managed Postgres
+# presents a self-signed cert on its internal network, and strict
+# certificate validation fails outright there.
 
 # Security -- the server refuses to start if either is unset
 JWT_SECRET=your-very-secure-jwt-secret-key-here
@@ -26,7 +29,8 @@ CORS_ORIGIN=https://your-frontend-domain.com
 See `.env.example` for the full list, including optional tuning
 (`OPENAI_MODEL`, `CLAUDE_MODEL`, `CHAT_CONTEXT_MESSAGE_LIMIT`,
 `CHAT_CONTEXT_CAP_REALERT_INTERVAL`, `CLINICIAN_WEBHOOK_URL`,
-`AUDIT_LOG_RETENTION_DAYS`, `INACTIVE_ACCOUNT_PURGE_DAYS`).
+`AUDIT_LOG_RETENTION_DAYS`, `INACTIVE_ACCOUNT_PURGE_DAYS`,
+`DB_SSL_REJECT_UNAUTHORIZED`).
 
 ## Database migrations
 

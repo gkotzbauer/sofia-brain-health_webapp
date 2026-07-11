@@ -251,8 +251,13 @@ lazy-singleton client with an explicit 20s timeout and `maxRetries: 2`.
   rotation. Server refuses to start if `JWT_SECRET` or `ENCRYPTION_KEY` is
   unset (fail closed).
 - **RBAC**: `backend/middleware/rbac.js`, enforced per-route.
-- **Encryption**: see §4. TLS certificate validation is enforced
-  (`rejectUnauthorized: true`) for the Postgres connection in production.
+- **Encryption**: see §4. The Postgres connection is always TLS-encrypted
+  in production, but certificate *validation* (`rejectUnauthorized`)
+  defaults to off (`DB_SSL_REJECT_UNAUTHORIZED=true` to enable) because
+  Render's managed Postgres presents a self-signed certificate on its
+  internal network -- strict validation fails outright there
+  (`DEPTH_ZERO_SELF_SIGNED_CERT`), confirmed against the real deployment.
+  Enable it only when hosting somewhere with a real CA-signed DB cert.
 - **Audit logging**: `backend/middleware/audit.js` — explicit
   `auditLog()` calls on every mutating route, capturing user, action,
   resource, IP, user agent.
@@ -317,7 +322,8 @@ both services together).
   (default `openai`), `OPENAI_MODEL`, `CLAUDE_MODEL`, `CORS_ORIGIN`,
   `CLINICIAN_WEBHOOK_URL`, `CHAT_CONTEXT_MESSAGE_LIMIT`,
   `CHAT_CONTEXT_CAP_REALERT_INTERVAL`, `AUDIT_LOG_RETENTION_DAYS`,
-  `INACTIVE_ACCOUNT_PURGE_DAYS`.
+  `INACTIVE_ACCOUNT_PURGE_DAYS`, `DB_SSL_REJECT_UNAUTHORIZED` (leave unset
+  on Render -- see the encryption note above).
 - **Retention job**: `npm run purge-retention` is not scheduled
   automatically by `render.yaml` — run it via a Render Cron Job (or any
   external scheduler) pointed at the backend service, on whatever cadence
