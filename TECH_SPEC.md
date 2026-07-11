@@ -303,9 +303,14 @@ lazy-singleton client with an explicit 20s timeout and `maxRetries: 2`.
 Reference config: `render.yaml` (Render Blueprint — provisions Postgres +
 both services together).
 
-- **Database**: managed Postgres; `preDeployCommand` runs
-  `npm run migrate` on every deploy (idempotent, tracks applied versions).
-- **Backend**: `buildCommand: npm install`, `startCommand: node server.js`.
+- **Database**: managed Postgres.
+- **Backend**: `buildCommand: npm install`, `startCommand: npm run migrate
+  && node server.js` -- migrations run at boot rather than via
+  `preDeployCommand`, since that Render feature requires a paid plan and
+  this service runs on `free`. `scripts/migrate.js` is idempotent (tracks
+  applied versions in `schema_migrations`), so re-running it on every
+  restart is safe. If the plan is ever upgraded, switching to a real
+  `preDeployCommand` is a one-line change.
   Required env: `DATABASE_URL`, `JWT_SECRET`, `ENCRYPTION_KEY`, and whichever
   provider key matches `LLM_PROVIDER` (`OPENAI_API_KEY` by default, or
   `ANTHROPIC_API_KEY` if switched to `anthropic`). Optional: `LLM_PROVIDER`

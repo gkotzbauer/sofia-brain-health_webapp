@@ -36,9 +36,10 @@ npm run migrate
 
 Applies `database/schema.sql` (once, as baseline) plus any
 `database/migrations/*.sql` not yet recorded in the `schema_migrations`
-table -- safe to run repeatedly. On Render this runs automatically via
-`preDeployCommand` (see `render.yaml`); elsewhere, run it manually after
-each deploy that includes new migrations.
+table -- safe to run repeatedly. On Render this runs automatically as part
+of `startCommand` on every boot (see `render.yaml`) -- `preDeployCommand`
+would be cleaner but requires a paid plan, and this service runs on `free`.
+Elsewhere, run it manually after each deploy that includes new migrations.
 
 ## Data retention job
 

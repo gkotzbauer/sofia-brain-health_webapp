@@ -10,8 +10,11 @@ services:
     runtime: node
     plan: free
     buildCommand: cd backend && npm install
-    preDeployCommand: cd backend && npm run migrate
-    startCommand: cd backend && node server.js
+    # preDeployCommand requires a paid Render plan -- this service is on
+    # free, so migrations run at boot instead. scripts/migrate.js is
+    # idempotent (tracks applied versions in schema_migrations), so
+    # re-running it on every restart, not just real deploys, is safe.
+    startCommand: cd backend && npm run migrate && node server.js
     envVars:
       - key: NODE_ENV
         value: production
