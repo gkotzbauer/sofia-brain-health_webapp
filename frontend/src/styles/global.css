@@ -1432,6 +1432,17 @@ a {
   margin-top: var(--space-6);
 }
 
+/* Visually sets the stated-diagnosis section in ClinicalReportReviewModal
+   apart from the rest of the review -- reinforces that this is a quote of
+   what the clinician documented, not Sofia's own read (see
+   backend/utils/systemPrompt.js "Clinical boundaries"). */
+.clinical-report-callout {
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
 @media (max-width: 600px) {
   .app-main {
     padding: var(--space-3);

@@ -11,6 +11,11 @@ const {
   DOCUMENT_EXTRACTION_TOOL_DESCRIPTION,
   DOCUMENT_EXTRACTION_PARAMETERS
 } = require('../utils/llm/documentExtractionSchema');
+const {
+  CLINICAL_REPORT_EXTRACTION_TOOL_NAME,
+  CLINICAL_REPORT_EXTRACTION_TOOL_DESCRIPTION,
+  CLINICAL_REPORT_EXTRACTION_PARAMETERS
+} = require('../utils/llm/clinicalReportExtractionSchema');
 const { updateAboutMe } = require('./users');
 const { createValue } = require('./values');
 const { createConcern } = require('./concerns');
@@ -22,6 +27,13 @@ const { createGoal } = require('./goals');
 // (utils/systemPrompt.js DOCUMENT_EXCERPT_CAP) since this is a one-off call,
 // not spent on every conversational turn.
 const EXTRACTION_TEXT_CAP = 4000;
+// Clinician letters/reports (post-diagnostic summaries, care-plan reviews)
+// routinely run several pages -- much longer than the self-reported
+// wellness documents EXTRACTION_TEXT_CAP was sized for. Truncating away the
+// diagnosis or care-plan section (which often appear later in the letter)
+// would silently drop the most important content, so this gets its own,
+// larger cap.
+const CLINICAL_REPORT_TEXT_CAP = 12000;
 // Below this, there's not enough text to meaningfully extract anything --
 // skip the LLM call entirely rather than spend one on near-nothing.
 const MIN_EXTRACTABLE_LENGTH = 50;
@@ -517,6 +529,118 @@ router.post('/:documentId/apply-extraction', async (req, res) => {
   } catch (error) {
     req.logger.error('Document extraction apply error:', error);
     res.status(500).json({ error: 'Failed to apply document extraction' });
+  }
+});
+
+// Best-effort parse of a free-text date (clinician letters write dates like
+// "19/Nov/2024") into a SQL-safe DATE value. Returns null rather than
+// throwing on anything unparseable -- the original text is never lost
+// either way, since it stays inside the encrypted report_data blob
+// regardless of whether this plain, sortable column could be populated.
+function parseReportDate(value) {
+  if (!value || typeof value !== 'string') return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+}
+
+// Extract candidate structured data from a clinician-authored document
+// (e.g. a post-diagnostic letter or care-plan review) -- the clinical
+// counterpart to POST /:documentId/extract above. Same never-write,
+// candidates-only contract: every fact is grounded in a source_excerpt, and
+// nothing is saved until the person reviews it via
+// POST /:documentId/apply-clinical-report. Kept as a fully separate
+// endpoint/schema from the wellness extraction above rather than folded in,
+// since clinical facts (a stated diagnosis, care plan) are a categorically
+// different -- and higher-stakes -- kind of data than self-reported
+// wellness fields.
+router.post('/:documentId/extract-clinical-report', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { documentId } = req.params;
+
+    const result = await req.pool.query(
+      'SELECT * FROM document_uploads WHERE id = $1 AND user_id = $2',
+      [documentId, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    const metadata = decryptJSON(result.rows[0].metadata) || {};
+    const extractedText = (metadata.extractedText || '').trim();
+
+    if (extractedText.length < MIN_EXTRACTABLE_LENGTH) {
+      return res.json({ documentId, candidates: {} });
+    }
+
+    if (!llm.isConfigured()) {
+      return res.status(503).json({ error: 'The document extraction assistant is not configured on this server yet.' });
+    }
+
+    const systemText =
+      "You are extracting structured clinical data from a document a clinician wrote for an aging-adult cognitive-care app (e.g. a post-diagnostic letter or care-plan review). Only extract facts you can ground in an explicit excerpt from the text below -- never infer, guess, or add your own clinical opinion. Leave a field/array empty or null if the document doesn't address it. The diagnosis field must quote what the clinician wrote, verbatim in meaning -- do not soften, hedge, or reinterpret it.";
+    const userText = `--- "${result.rows[0].filename}" ---\n${extractedText.slice(0, CLINICAL_REPORT_TEXT_CAP)}`;
+
+    const candidates = await llm.getProvider().generateStructuredExtraction({
+      systemText,
+      userText,
+      toolName: CLINICAL_REPORT_EXTRACTION_TOOL_NAME,
+      toolDescription: CLINICAL_REPORT_EXTRACTION_TOOL_DESCRIPTION,
+      parameters: CLINICAL_REPORT_EXTRACTION_PARAMETERS
+    });
+
+    await req.auditLog(userId, 'CLINICAL_REPORT_EXTRACTED', 'document_uploads', documentId, req);
+
+    res.json({ documentId, candidates });
+  } catch (error) {
+    req.logger.error('Clinical report extraction error:', error);
+    res.status(500).json({ error: 'Failed to extract clinical report from document' });
+  }
+});
+
+// Saves the clinical report exactly as the person reviewed/edited it in the
+// review modal -- the whole reviewed object is stored as one row (encrypted
+// wholesale, like the extraction candidates it came from) rather than
+// merged field-by-field into other tables, since this is a self-contained
+// report as of a point in time, not a set of independent profile facts.
+router.post('/:documentId/apply-clinical-report', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { documentId } = req.params;
+    const reportData = req.body?.report;
+
+    if (!reportData || typeof reportData !== 'object') {
+      return res.status(400).json({ error: 'A report object is required' });
+    }
+
+    const docResult = await req.pool.query(
+      'SELECT id FROM document_uploads WHERE id = $1 AND user_id = $2',
+      [documentId, userId]
+    );
+    if (docResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    const reportDate = parseReportDate(reportData.assessment_info?.report_date);
+    const assessmentDate = parseReportDate(reportData.assessment_info?.assessment_date);
+
+    const insertResult = await req.pool.query(
+      `INSERT INTO clinical_reports (user_id, document_upload_id, report_date, assessment_date, report_data)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id, report_date, assessment_date, applied_at`,
+      [userId, documentId, reportDate, assessmentDate, encryptJSON(reportData)]
+    );
+
+    await req.pool.query(
+      `UPDATE document_uploads SET applied_count = applied_count + 1, processed_timestamp = CURRENT_TIMESTAMP WHERE id = $1 AND user_id = $2`,
+      [documentId, userId]
+    );
+
+    await req.auditLog(userId, 'CLINICAL_REPORT_APPLIED', 'clinical_reports', insertResult.rows[0].id, req);
+
+    res.json({ clinicalReport: { ...insertResult.rows[0], report_data: reportData } });
+  } catch (error) {
+    req.logger.error('Clinical report apply error:', error);
+    res.status(500).json({ error: 'Failed to save clinical report' });
   }
 });
 

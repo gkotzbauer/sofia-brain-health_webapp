@@ -53,7 +53,7 @@ router.post('/', chatLimiter, async (req, res) => {
     const existingState = session.state || {};
     const existingLog = decryptJSON(session.conversation_log) || [];
 
-    const { aboutMe, goals, chapters, documents, values, concerns, educationTopics, profileCompleteness } =
+    const { aboutMe, goals, chapters, documents, values, concerns, educationTopics, profileCompleteness, clinicalReport } =
       await loadUserContext(req.pool, userId);
 
     const systemBlocks = buildSystemPrompt({
@@ -66,7 +66,8 @@ router.post('/', chatLimiter, async (req, res) => {
       concerns,
       educationTopics,
       state: existingState,
-      profileCompleteness
+      profileCompleteness,
+      clinicalReport
     });
 
     // Only the most recent MAX_CONTEXT_MESSAGES entries go to the model; the

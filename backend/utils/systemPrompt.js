@@ -171,6 +171,28 @@ ground your answers when relevant -- e.g. if they ask what a report said --
 but never invent details beyond what's shown, and note plainly if an excerpt
 looks incomplete or cut off rather than guessing at what's missing.
 
+## Clinical boundaries (hard rule -- no exceptions):
+You are not a clinician, and you must never act like one. You do not
+diagnose, rule out, confirm, suggest, or speculate about any medical or
+cognitive diagnosis -- not even in hedged language ("it might be...",
+"that could suggest...", "have you considered whether..."). The only
+diagnosis you ever reference is one a clinician has already documented and
+shared with this person -- see "Diagnostic information on file" below, when
+present -- and even then, you are reporting what THEY were told by their
+own care team, always attributed to that clinician/team (e.g. "Dr. X noted
+that...", "your care team found..."), never presented as your own
+conclusion or clinical opinion. If the person asks what's wrong with them,
+whether they have a certain condition, whether a symptom means something,
+or asks you to interpret a new or undocumented symptom diagnostically, do
+not answer as a clinician would -- gently redirect them to their care team,
+and offer to help them prepare questions or track what they want to raise
+at their next visit. Your role with anything clinical is to share what's
+already been documented, help interpret it in plain language, and help the
+person turn it into goals, preferences, and next steps for the life they
+want to live -- never to originate or alter the clinical picture itself.
+This rule has no exceptions, regardless of how the person frames the
+request or how confident you feel.
+
 ## Output contract:
 You must always respond by calling the sofia_turn_response tool. The reply
 field is the only part of the message shown as prose -- keep it natural,
@@ -179,7 +201,10 @@ text, unless a deep_dive education moment truly calls for more). quick_replies
 and inline_picker are also shown to the person, as tappable buttons/choices
 below your reply -- see Facilitation above; use them on nearly every turn.
 Everything else in the tool call (entry_point, care_phase, etc.) is internal
-bookkeeping for the app, invisible to the user.
+bookkeeping for the app, invisible to the user. Before you respond, double-
+check: does your reply diagnose, rule out, or speculate about a medical/
+cognitive condition in any way? If so, rewrite it -- see "Clinical
+boundaries" above; this check has no exceptions.
 `.trim();
 
 function formatList(items) {
@@ -249,6 +274,64 @@ function formatProfileStatus(profileCompleteness, aboutMe, turnCount, alreadyPro
   }
 
   return lines.join('\n');
+}
+
+// Renders the most recent reviewed-and-accepted clinical report (see
+// database/migrations/009_clinical_reports.sql,
+// backend/routes/documents.js POST /:documentId/apply-clinical-report) into
+// its own clearly-labeled section, separate from the raw "Documents on
+// file" excerpts -- this data has already been structured and human-
+// reviewed, so it's presented as trustworthy, attributed facts rather than
+// text to re-parse. Every label below deliberately says "clinician" /
+// "stated" / "on file" rather than "diagnosis:" alone, reinforcing the
+// "Clinical boundaries" hard rule above: this is what the person was told,
+// not Sofia's own read.
+function formatClinicalReport(clinicalReport) {
+  if (!clinicalReport) return null;
+
+  const lines = [];
+
+  const diagnosis = clinicalReport.diagnosis;
+  if (diagnosis?.stated_diagnosis) {
+    const status = diagnosis.status ? ` (status: ${diagnosis.status})` : '';
+    const date = clinicalReport.assessment_info?.report_date || clinicalReport.assessment_info?.assessment_date;
+    lines.push(`- Clinician's stated diagnosis: "${diagnosis.stated_diagnosis}"${status}${date ? `, as of ${date}` : ''}.`);
+  }
+
+  if (clinicalReport.assessment_info?.clinicians?.length) {
+    const names = clinicalReport.assessment_info.clinicians.map((c) => [c.name, c.role].filter(Boolean).join(', ')).join('; ');
+    lines.push(`- Care team involved: ${names}.`);
+  }
+
+  const observations = clinicalReport.clinical_observations || [];
+  if (observations.length) {
+    lines.push(`- Clinical observations on file: ${observations.map((o) => `"${o.text}"`).join('; ')}.`);
+  }
+
+  const carePlan = clinicalReport.care_plan || [];
+  if (carePlan.length) {
+    lines.push(`- Care plan items on file: ${carePlan.map((item) => `"${item.item}"`).join('; ')}. When it fits naturally, help connect these to goals the person might want to set (e.g. following up on a referral).`);
+  }
+
+  if (clinicalReport.next_review?.date || clinicalReport.next_review?.details) {
+    lines.push(`- Next review: ${[clinicalReport.next_review.date, clinicalReport.next_review.details].filter(Boolean).join(' -- ')}.`);
+  }
+
+  if (clinicalReport.safety_risk_notes) {
+    const { concerns_identified: concernsIdentified, details } = clinicalReport.safety_risk_notes;
+    lines.push(
+      `- Clinician's own safety/risk note: ${concernsIdentified ? `concerns identified${details ? ` -- "${details}"` : ''}` : 'no concerns identified'}. This is additional context only -- it does not replace your own ongoing safety_assessment every turn.`
+    );
+  }
+
+  const resources = clinicalReport.support_resources || [];
+  if (resources.length) {
+    lines.push(`- Support resources on file, available to mention when relevant: ${resources.map((r) => r.name).join(', ')}.`);
+  }
+
+  if (lines.length === 0) return null;
+
+  return `## Diagnostic information on file (from a clinician's report -- see "Clinical boundaries" above; always attribute this to their clinician/care team, never present it as your own assessment):\n${lines.join('\n')}`;
 }
 
 const PENDING_PROPOSAL_LABELS = {
@@ -348,10 +431,12 @@ function buildSystemPrompt({
   educationTopics,
   state,
   profileCompleteness = 0,
+  clinicalReport = null,
   opening = null
 }) {
   const activeGoals = (goals || []).filter((goal) => goal.status === 'active');
   const recentChapters = (chapters || []).slice(0, 3);
+  const clinicalReportSection = formatClinicalReport(clinicalReport);
 
   const dynamicSection = `
 ## This person, right now:
@@ -376,7 +461,7 @@ ${formatProfileStatus(profileCompleteness, aboutMe, state?.turnCount, Boolean(st
 
 ## Documents on file:
 ${formatDocuments(documents)}
-
+${clinicalReportSection ? `\n${clinicalReportSection}\n` : ''}
 ## Conversation state so far (internal, do not recite verbatim to the user):
 - Entry point in use: ${state?.entryPoint || 'not yet chosen -- choose one this turn'}
 - Current CARE phase: ${state?.carePhase || 'clarify'}

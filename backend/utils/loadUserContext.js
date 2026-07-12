@@ -7,19 +7,33 @@
 const { decryptJSON, decryptField } = require('./phiCrypto');
 
 async function loadUserContext(pool, userId) {
-  const [aboutMeResult, goalsResult, chaptersResult, documentsResult, valuesResult, concernsResult, educationTopicsResult] =
-    await Promise.all([
-      pool.query('SELECT * FROM about_me_profiles WHERE user_id = $1', [userId]),
-      pool.query('SELECT * FROM goals WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
-      pool.query('SELECT * FROM story_chapters WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5', [userId]),
-      pool.query(
-        'SELECT filename, metadata FROM document_uploads WHERE user_id = $1 ORDER BY upload_timestamp DESC LIMIT 3',
-        [userId]
-      ),
-      pool.query('SELECT * FROM values WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
-      pool.query('SELECT * FROM concerns WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
-      pool.query('SELECT * FROM education_topics WHERE user_id = $1 ORDER BY created_at DESC', [userId])
-    ]);
+  const [
+    aboutMeResult,
+    goalsResult,
+    chaptersResult,
+    documentsResult,
+    valuesResult,
+    concernsResult,
+    educationTopicsResult,
+    clinicalReportResult
+  ] = await Promise.all([
+    pool.query('SELECT * FROM about_me_profiles WHERE user_id = $1', [userId]),
+    pool.query('SELECT * FROM goals WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+    pool.query('SELECT * FROM story_chapters WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5', [userId]),
+    pool.query(
+      'SELECT filename, metadata FROM document_uploads WHERE user_id = $1 ORDER BY upload_timestamp DESC LIMIT 3',
+      [userId]
+    ),
+    pool.query('SELECT * FROM values WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+    pool.query('SELECT * FROM concerns WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+    pool.query('SELECT * FROM education_topics WHERE user_id = $1 ORDER BY created_at DESC', [userId]),
+    // Most recent clinical report only -- see database/migrations/009_clinical_reports.sql
+    // and utils/systemPrompt.js's "Diagnostic information on file" section.
+    pool.query(
+      'SELECT report_data, report_date FROM clinical_reports WHERE user_id = $1 ORDER BY report_date DESC NULLS LAST, created_at DESC LIMIT 1',
+      [userId]
+    )
+  ]);
 
   const aboutMeRow = aboutMeResult.rows[0];
   const aboutMe = aboutMeRow
@@ -39,8 +53,10 @@ async function loadUserContext(pool, userId) {
   const concerns = concernsResult.rows.map((concern) => ({ ...concern, concern: decryptField(concern.concern) }));
   const educationTopics = educationTopicsResult.rows.map((topic) => ({ ...topic, topic: decryptField(topic.topic) }));
   const profileCompleteness = aboutMeRow?.profile_completeness ?? 0;
+  const clinicalReportRow = clinicalReportResult.rows[0];
+  const clinicalReport = clinicalReportRow ? decryptJSON(clinicalReportRow.report_data) : null;
 
-  return { aboutMe, goals, chapters, documents, values, concerns, educationTopics, profileCompleteness };
+  return { aboutMe, goals, chapters, documents, values, concerns, educationTopics, profileCompleteness, clinicalReport };
 }
 
 module.exports = { loadUserContext };

@@ -243,6 +243,115 @@ export interface ApplyExtractionResult {
   applied: Record<string, unknown>;
 }
 
+// Mirrors backend/utils/llm/clinicalReportExtractionSchema.js -- candidate
+// structured data extracted from a clinician-authored document (e.g. a
+// post-diagnostic letter), distinct from the self-reported wellness
+// candidates above. Every fact carries a source_excerpt and nothing here
+// is ever pre-accepted; see ClinicalReportReviewModal.
+export interface ClinicalReportClinician {
+  name: string;
+  role?: string;
+}
+export interface ClinicalReportAssessmentInfo {
+  assessment_date?: string | null;
+  report_date?: string | null;
+  clinicians?: ClinicalReportClinician[];
+  clinic_name?: string | null;
+}
+export interface ClinicalReportDiagnosis {
+  stated_diagnosis: string;
+  icd_or_read_code?: string | null;
+  status?: string | null;
+  source_excerpt: string;
+}
+export interface ClinicalReportFamilyHistory {
+  father?: string | null;
+  mother?: string | null;
+  other?: string | null;
+}
+export interface ClinicalReportBackground {
+  symptom_duration?: string | null;
+  previous_occupation?: string | null;
+  employment_status?: string | null;
+  family_history?: ClinicalReportFamilyHistory | null;
+  caregiving_history?: string | null;
+  source_excerpt: string;
+}
+export interface ClinicalReportTextItem {
+  text: string;
+  source_excerpt: string;
+}
+export interface ClinicalReportSymptoms {
+  cognitive?: ClinicalReportTextItem[];
+  physical?: ClinicalReportTextItem[];
+  sleep?: ClinicalReportTextItem[];
+  mood_or_behavioral?: ClinicalReportTextItem[];
+}
+export interface ClinicalReportSubscore {
+  domain: string;
+  score: string;
+}
+export interface ClinicalReportAssessmentResult {
+  test_name: string;
+  score: string;
+  subscores?: ClinicalReportSubscore[];
+  interpretation?: string | null;
+  date?: string | null;
+  source_excerpt: string;
+}
+export interface ClinicalReportImagingOrLab {
+  type: string;
+  date?: string | null;
+  findings: string;
+  source_excerpt: string;
+}
+export interface ClinicalReportSafetyRiskNotes {
+  concerns_identified: boolean;
+  details?: string | null;
+  source_excerpt: string;
+}
+export interface ClinicalReportCarePlanItem {
+  item: string;
+  category?: string | null;
+  target_date?: string | null;
+  source_excerpt: string;
+}
+export interface ClinicalReportNextReview {
+  date?: string | null;
+  details?: string | null;
+}
+export interface ClinicalReportSupportResource {
+  name: string;
+  description?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  source_excerpt: string;
+}
+
+export interface ClinicalReportCandidates {
+  document_type?: string | null;
+  assessment_info?: ClinicalReportAssessmentInfo | null;
+  diagnosis?: ClinicalReportDiagnosis | null;
+  patient_background?: ClinicalReportBackground | null;
+  current_symptoms?: ClinicalReportSymptoms | null;
+  assessment_results?: ClinicalReportAssessmentResult[];
+  imaging_or_labs?: ClinicalReportImagingOrLab[];
+  clinical_observations?: ClinicalReportTextItem[];
+  safety_risk_notes?: ClinicalReportSafetyRiskNotes | null;
+  care_plan?: ClinicalReportCarePlanItem[];
+  next_review?: ClinicalReportNextReview | null;
+  support_resources?: ClinicalReportSupportResource[];
+}
+
+export interface ClinicalReportExtractionResult {
+  documentId: string;
+  candidates: ClinicalReportCandidates;
+}
+
+export interface ApplyClinicalReportResult {
+  clinicalReport: { id: string; report_date: string | null; assessment_date: string | null; applied_at: string; report_data: ClinicalReportCandidates };
+}
+
 export interface ValueItem {
   id: string;
   value_text: string;
@@ -353,6 +462,13 @@ export const api = {
     request<ApplyExtractionResult>(`/documents/${documentId}/apply-extraction`, {
       method: 'POST',
       body: JSON.stringify(payload)
+    }),
+  extractClinicalReport: (documentId: string) =>
+    request<ClinicalReportExtractionResult>(`/documents/${documentId}/extract-clinical-report`, { method: 'POST' }),
+  applyClinicalReport: (documentId: string, report: ClinicalReportCandidates) =>
+    request<ApplyClinicalReportResult>(`/documents/${documentId}/apply-clinical-report`, {
+      method: 'POST',
+      body: JSON.stringify({ report })
     }),
 
   submitFeedback: (data: { sessionId?: string; feedbackText: string }) =>
