@@ -251,6 +251,29 @@ function formatProfileStatus(profileCompleteness, aboutMe, turnCount, alreadyPro
   return lines.join('\n');
 }
 
+const PENDING_PROPOSAL_LABELS = {
+  goal: 'goal',
+  chapter: 'story chapter',
+  value: 'value',
+  concern: 'concern',
+  education_topic: 'education topic'
+};
+
+// Tells the model exactly what it already proposed and is still waiting on
+// a decision about -- without this, nothing in its context distinguishes
+// "I haven't brought this up yet" from "I already asked and they haven't
+// answered," so it has no reason not to just ask again. Confirmed bug this
+// fixes: the same goal proposal shown 3+ times in a row (see
+// utils/turnState.js buildMergedState, which also now enforces a hard
+// suppression backstop independent of whether the model follows this).
+function formatPendingConfirmation(pendingConfirmation, proposalAttemptCount) {
+  if (!pendingConfirmation) return 'none';
+  const label = PENDING_PROPOSAL_LABELS[pendingConfirmation.type] || pendingConfirmation.type;
+  const summary = pendingConfirmation.payload?.text || pendingConfirmation.payload?.title || 'see payload';
+  const attemptNote = proposalAttemptCount > 1 ? `you've already shown this ${proposalAttemptCount} times` : "you've shown this once already";
+  return `a ${label} -- "${summary}" -- ${attemptNote}, still awaiting their decision (they can Save it or dismiss it right in the app). Do NOT restate or re-propose this same thing again this turn. Either wait quietly (free to talk about something else), check in about it briefly in different words at most once, or move the conversation forward another way.`;
+}
+
 function firstNameOf(fullName) {
   if (!fullName) return null;
   return fullName.trim().split(/\s+/)[0];
@@ -361,6 +384,7 @@ ${formatDocuments(documents)}
 - Turn count this session: ${state?.turnCount ?? 0}
 - Recent pivots: ${state?.pivotHistory?.length ? state.pivotHistory.map((p) => p.type).join(', ') : 'none'}
 - Recent safety flags: ${state?.safetyFlags?.length ? state.safetyFlags.map((f) => `${f.triggerType || 'none'}/${f.severity}`).join(', ') : 'none'}
+- Pending proposal awaiting their decision: ${formatPendingConfirmation(state?.pendingConfirmation, state?.proposalAttemptCount)}
 ${opening ? `\n${formatOpening(opening, user?.name)}` : ''}
 `.trim();
 

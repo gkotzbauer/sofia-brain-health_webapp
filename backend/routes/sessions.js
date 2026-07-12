@@ -5,6 +5,7 @@ const { buildSystemPrompt } = require('../utils/systemPrompt');
 const { loadUserContext } = require('../utils/loadUserContext');
 const { buildMergedState } = require('../utils/turnState');
 const { MAX_CONTEXT_MESSAGES } = require('../utils/chatConfig');
+const { logConversationTurn } = require('../utils/conversationTurnLog');
 const llm = require('../utils/llm');
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -76,6 +77,7 @@ async function attachOpeningTurn(req, session, userId) {
     // Anthropic requires at least one message with role "user"; this
     // placeholder is explicitly called out as ignorable in the "Session
     // opening" system-prompt block above, for both providers.
+    const generateStartedAt = Date.now();
     const turn = await llm.getProvider().generateTurn({
       systemBlocks,
       messages: [{ role: 'user', content: '[session start -- no message yet]' }]
@@ -112,6 +114,16 @@ async function attachOpeningTurn(req, session, userId) {
       'UPDATE sessions SET conversation_log = $1, state = $2 WHERE id = $3',
       [encryptJSON(openingLog), JSON.stringify(mergedState), session.id]
     );
+
+    await logConversationTurn(req.pool, req.logger, {
+      sessionId: session.id,
+      userId,
+      isOpening: true,
+      userMessage: null,
+      turn,
+      mergedState,
+      latencyMs: Date.now() - generateStartedAt
+    });
 
     session.conversation_log = encryptJSON(openingLog);
     session.state = mergedState;

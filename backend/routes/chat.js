@@ -10,6 +10,7 @@ const { buildSystemPrompt } = require('../utils/systemPrompt');
 const { loadUserContext } = require('../utils/loadUserContext');
 const { buildMergedState } = require('../utils/turnState');
 const { MAX_CONTEXT_MESSAGES, CONTEXT_CAP_REALERT_INTERVAL } = require('../utils/chatConfig');
+const { logConversationTurn } = require('../utils/conversationTurnLog');
 const llm = require('../utils/llm');
 
 // Warm, on-brand copy shown when the model call itself fails/times out --
@@ -81,6 +82,7 @@ router.post('/', chatLimiter, async (req, res) => {
     llmMessages.push({ role: 'user', content: message });
 
     let turn;
+    const generateStartedAt = Date.now();
     try {
       turn = await llm.getProvider().generateTurn({ systemBlocks, messages: llmMessages });
     } catch (apiError) {
@@ -223,6 +225,16 @@ router.post('/', chatLimiter, async (req, res) => {
       'UPDATE sessions SET conversation_log = $1, state = $2 WHERE id = $3',
       [encryptJSON(newLog), JSON.stringify(mergedState), sessionId]
     );
+
+    await logConversationTurn(req.pool, req.logger, {
+      sessionId,
+      userId,
+      isOpening: false,
+      userMessage: message,
+      turn,
+      mergedState,
+      latencyMs: Date.now() - generateStartedAt
+    });
 
     await req.auditLog(userId, 'CHAT_MESSAGE', 'sessions', sessionId, req);
 

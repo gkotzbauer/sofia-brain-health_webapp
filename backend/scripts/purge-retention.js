@@ -15,7 +15,13 @@ require('dotenv').config();
 //      "forever." Rows for already-deleted users (user_id IS NULL, per the
 //      ON DELETE SET NULL on audit_log.user_id) are purged the same way.
 //
-//   2. Accounts that have been deactivated (is_active = false) for longer
+//   2. conversation_turn_logs rows older than the same
+//      AUDIT_LOG_RETENTION_DAYS window (see
+//      database/migrations/008_conversation_turn_logs.sql) -- it's a
+//      per-turn diagnostic/audit trail, not a clinical record, so it
+//      follows the audit_log retention policy rather than a separate one.
+//
+//   3. Accounts that have been deactivated (is_active = false) for longer
 //      than INACTIVE_ACCOUNT_PURGE_DAYS, if that env var is explicitly
 //      set. Unset by default -- this script will never delete a user's PHI
 //      without an explicit opt-in retention window, since "is_active =
@@ -43,6 +49,13 @@ async function purgeRetention() {
       [AUDIT_LOG_RETENTION_DAYS]
     );
     console.log(`  Deleted ${auditResult.rowCount} audit_log row(s).`);
+
+    console.log(`Purging conversation_turn_logs rows older than ${AUDIT_LOG_RETENTION_DAYS} days...`);
+    const turnLogResult = await pool.query(
+      `DELETE FROM conversation_turn_logs WHERE created_at < NOW() - ($1 || ' days')::interval`,
+      [AUDIT_LOG_RETENTION_DAYS]
+    );
+    console.log(`  Deleted ${turnLogResult.rowCount} conversation_turn_logs row(s).`);
 
     if (INACTIVE_ACCOUNT_PURGE_DAYS !== null) {
       console.log(`Purging accounts deactivated more than ${INACTIVE_ACCOUNT_PURGE_DAYS} days ago...`);

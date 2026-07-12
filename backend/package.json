@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "migrate": "node scripts/migrate.js",
     "purge-retention": "node scripts/purge-retention.js",
+    "dump-conversation": "node scripts/dump-conversation.js",
     "test": "jest",
     "lint": "eslint ."
   },

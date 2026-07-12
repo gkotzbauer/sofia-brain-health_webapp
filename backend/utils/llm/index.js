@@ -31,4 +31,13 @@ function isConfigured() {
   return Boolean(process.env[missingEnvVar()]);
 }
 
-module.exports = { getProvider, getProviderName, isConfigured, missingEnvVar };
+// The actual model name in use -- for conversation_turn_logs (see
+// utils/conversationTurnLog.js), not required for normal request handling,
+// so it's kept separate rather than plumbed through the provider interface.
+function getModelName() {
+  return getProviderName() === 'anthropic'
+    ? process.env.CLAUDE_MODEL || 'claude-sonnet-4-5'
+    : process.env.OPENAI_MODEL || 'gpt-4o';
+}
+
+module.exports = { getProvider, getProviderName, getModelName, isConfigured, missingEnvVar };

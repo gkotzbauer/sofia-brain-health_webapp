@@ -8,7 +8,7 @@ import { useEducationTopics } from '../../hooks/useEducationTopics';
 
 interface InlinePendingConfirmationProps {
   confirmation: PendingConfirmation;
-  onSave: (summaryMessage: string) => void;
+  onResolved: (summaryMessage: string) => void;
   disabled?: boolean;
 }
 
@@ -27,13 +27,12 @@ const LABELS: Record<PendingConfirmation['type'], string> = {
 // have existed since early in this project -- were never actually
 // actionable. This renders that proposal as an editable card and writes it
 // through the SAME existing create endpoints the manual profile forms use.
-export function InlinePendingConfirmation({ confirmation, onSave, disabled }: InlinePendingConfirmationProps) {
+export function InlinePendingConfirmation({ confirmation, onResolved, disabled }: InlinePendingConfirmationProps) {
   const { createGoal, isCreating: isCreatingGoal } = useGoals();
   const { createChapter, isCreating: isCreatingChapter } = useChapters();
   const { createValue, isCreating: isCreatingValue } = useValues();
   const { createConcern, isCreating: isCreatingConcern } = useConcerns();
   const { createTopic, isCreating: isCreatingTopic } = useEducationTopics();
-  const [dismissed, setDismissed] = useState(false);
 
   const payload = confirmation.payload as Record<string, unknown>;
   const [text, setText] = useState(String((confirmation.type === 'chapter' ? payload.title : payload.text) ?? ''));
@@ -51,32 +50,40 @@ export function InlinePendingConfirmation({ confirmation, onSave, disabled }: In
   const [learning, setLearning] = useState(String(payload.learning ?? ''));
   const [context, setContext] = useState(String(payload.context ?? ''));
 
-  if (dismissed) return null;
-
   const isSaving = isCreatingGoal || isCreatingChapter || isCreatingValue || isCreatingConcern || isCreatingTopic;
 
   async function handleSave() {
     switch (confirmation.type) {
       case 'goal':
         await createGoal({ goal: text, confidence: Number(secondary) || 7 });
-        onSave(`Yes, let's save that goal: "${text}".`);
+        onResolved(`Yes, let's save that goal: "${text}".`);
         return;
       case 'chapter':
         await createChapter({ title: text, moment, moodArc: (payload.moodArc as string[]) || [], choices, learning });
-        onSave(`Yes, let's save that chapter: "${text}".`);
+        onResolved(`Yes, let's save that chapter: "${text}".`);
         return;
       case 'value':
         await createValue({ valueText: text, importance: secondary });
-        onSave(`Yes, save that as one of my values: "${text}".`);
+        onResolved(`Yes, save that as one of my values: "${text}".`);
         return;
       case 'concern':
         await createConcern({ concern: text, severity: secondary, context });
-        onSave(`Yes, save that concern: "${text}".`);
+        onResolved(`Yes, save that concern: "${text}".`);
         return;
       case 'education_topic':
         await createTopic({ topic: text, engagement: secondary });
-        onSave(`Yes, I'd like to learn more about that: "${text}".`);
+        onResolved(`Yes, I'd like to learn more about that: "${text}".`);
     }
+  }
+
+  // Deliberately sends a real message rather than only hiding the card
+  // locally -- a silent local-only dismiss means the model never learns
+  // the person declined, so nothing stops it from proposing the identical
+  // thing again next turn (this was half of the repeated-goal bug: the
+  // other half is utils/systemPrompt.js now telling the model what's
+  // already pending, plus utils/turnState.js's hard suppression backstop).
+  function handleDismiss() {
+    onResolved('Not right now, thanks.');
   }
 
   return (
@@ -160,7 +167,7 @@ export function InlinePendingConfirmation({ confirmation, onSave, disabled }: In
       )}
 
       <div className="inline-picker-actions">
-        <button type="button" className="button-secondary" onClick={() => setDismissed(true)} disabled={disabled || isSaving}>
+        <button type="button" className="button-secondary" onClick={handleDismiss} disabled={disabled || isSaving}>
           Not now
         </button>
         <button type="button" className="button-primary" onClick={handleSave} disabled={disabled || isSaving || !text.trim()}>

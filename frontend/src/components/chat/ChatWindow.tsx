@@ -70,7 +70,7 @@ export function ChatWindow() {
               picker, which outranks plain quick replies -- all three are
               mutually exclusive, trailing-turn-only facilitation controls. */}
           {showFacilitation && state?.pendingConfirmation && (
-            <InlinePendingConfirmation confirmation={state.pendingConfirmation} onSave={sendMessage} disabled={isSending} />
+            <InlinePendingConfirmation confirmation={state.pendingConfirmation} onResolved={sendMessage} disabled={isSending} />
           )}
           {showFacilitation && !state?.pendingConfirmation && trailingTurn.inlinePicker && (
             <InlineAboutMePicker picker={trailingTurn.inlinePicker} onSubmit={sendMessage} disabled={isSending} />
