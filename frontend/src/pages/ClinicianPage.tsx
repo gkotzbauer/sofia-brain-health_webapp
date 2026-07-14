@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useClinicianAlerts } from '../hooks/useClinicianAlerts';
+import { useStudySurveySummary } from '../hooks/useStudySurveySummary';
+import { SECTION_LABELS } from '../constants/surveyScales';
 
 const PRIORITY_LABEL: Record<string, string> = {
   critical: 'Critical',
@@ -15,6 +17,9 @@ const ALERT_TYPE_LABEL: Record<string, string> = {
 
 export function ClinicianPage() {
   const { alerts, isLoading, acknowledge, isAcknowledging } = useClinicianAlerts();
+  const { summary, questions, isLoading: isLoadingSurvey } = useStudySurveySummary();
+
+  const summaryByKey = new Map(summary.map((row) => [row.questionKey, row]));
 
   return (
     <div className="clinician-page">
@@ -46,6 +51,37 @@ export function ClinicianPage() {
           </article>
         ))}
       </div>
+
+      <h2>Feasibility survey results</h2>
+      {isLoadingSurvey && <p>Loading survey results...</p>}
+      {!isLoadingSurvey && summary.length === 0 && <p className="empty-state">No survey responses yet.</p>}
+      {!isLoadingSurvey && summary.length > 0 && (
+        <div className="survey-summary-table-wrap">
+          <table className="survey-summary-table">
+            <thead>
+              <tr>
+                <th>Section</th>
+                <th>Question</th>
+                <th>Avg rating</th>
+                <th>Responses</th>
+              </tr>
+            </thead>
+            <tbody>
+              {questions.map((question) => {
+                const row = summaryByKey.get(question.key);
+                return (
+                  <tr key={question.key}>
+                    <td>{SECTION_LABELS[question.section] || question.section}</td>
+                    <td>{question.text}</td>
+                    <td>{row?.averageRating !== null && row?.averageRating !== undefined ? row.averageRating.toFixed(1) : '--'}</td>
+                    <td>{row?.responseCount ?? 0}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

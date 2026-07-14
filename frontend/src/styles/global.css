@@ -510,6 +510,14 @@ a {
   gap: var(--space-2);
 }
 
+.feedback-panel label {
+  font-weight: 600;
+  margin-top: var(--space-2);
+}
+.feedback-panel label:first-child {
+  margin-top: 0;
+}
+
 .feedback-panel textarea {
   min-height: calc(var(--touch-target) * 2);
   padding: var(--space-3);
@@ -517,12 +525,6 @@ a {
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   resize: vertical;
-}
-
-.feedback-log {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 }
 
 .feedback-confirmation {
@@ -562,7 +564,18 @@ a {
   background: var(--gradient-hero);
   color: #ffffff;
   padding: var(--space-4) var(--space-5);
+}
+
+.chat-hero-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.chat-hero-title {
   text-align: center;
+  flex: 1;
 }
 
 .chat-hero h1 {
@@ -574,6 +587,25 @@ a {
   margin: 0;
   opacity: 0.9;
   font-size: var(--font-size-sm);
+}
+
+/* On-hero variant: the default text-size-control (light surface, dark
+   border) doesn't read on the gradient hero background -- restyle for
+   contrast on a dark ground instead. */
+.text-size-control.on-hero {
+  border-color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}
+.text-size-control.on-hero .text-size-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+.text-size-control.on-hero .text-size-btn + .text-size-btn {
+  border-left-color: rgba(255, 255, 255, 0.35);
+}
+.text-size-control.on-hero .text-size-btn-active {
+  background: #ffffff;
+  color: var(--color-primary);
 }
 
 .chat-body {
@@ -1456,6 +1488,12 @@ a {
     max-width: 95%;
   }
 
+  .chat-hero-row {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
   .app-main-wide {
     max-width: 720px;
     margin: 0 auto;
@@ -1626,4 +1664,112 @@ a {
   color: var(--color-danger-contrast);
   border-color: var(--color-danger);
   font-weight: 600;
+}
+
+/* Feasibility study survey (pages/StudySurveyPage.tsx) */
+
+.survey-usage-note,
+.survey-previous-note {
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.survey-section {
+  margin-top: var(--space-6);
+}
+
+.survey-section h2 {
+  font-size: var(--font-size-lg);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.survey-question {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.survey-question-text {
+  font-weight: 600;
+  margin: 0;
+}
+
+.survey-question-number {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.survey-rating-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.survey-rating-row input[type='range'] {
+  flex: 1;
+}
+
+.survey-rating-value {
+  font-weight: 600;
+  min-width: 14ch;
+  text-align: right;
+  font-size: var(--font-size-sm);
+}
+
+.survey-explanation-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+.survey-question textarea {
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+/* Feasibility survey results (pages/ClinicianPage.tsx summary table) */
+
+.survey-summary-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-3);
+}
+
+.survey-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+  min-width: 40rem;
+}
+
+.survey-summary-table th,
+.survey-summary-table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.survey-summary-table th {
+  background: var(--color-surface-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+}
+
+.survey-summary-table tr:last-child td {
+  border-bottom: none;
 }

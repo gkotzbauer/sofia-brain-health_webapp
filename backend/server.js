@@ -35,6 +35,7 @@ const valueRoutes = require('./routes/values');
 const concernRoutes = require('./routes/concerns');
 const educationTopicRoutes = require('./routes/educationTopics');
 const adminRoutes = require('./routes/admin');
+const studySurveyRoutes = require('./routes/studySurvey');
 
 // Initialize Express app
 const app = express();
@@ -197,6 +198,7 @@ app.use('/api/values', authenticateToken, valueRoutes);
 app.use('/api/concerns', authenticateToken, concernRoutes);
 app.use('/api/education-topics', authenticateToken, educationTopicRoutes);
 app.use('/api/admin', authenticateToken, adminRoutes); // Admin/clinician routes (role-checked per-route)
+app.use('/api/study-survey', authenticateToken, studySurveyRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

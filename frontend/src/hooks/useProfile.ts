@@ -16,11 +16,20 @@ export function useProfile() {
     }
   });
 
+  const updateLanguagePreference = useMutation({
+    mutationFn: (preferredLanguage: string) => api.updateLanguagePreference(preferredLanguage),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    }
+  });
+
   return {
     profile: profileQuery.data,
     isLoading: profileQuery.isLoading,
     error: profileQuery.error,
     updateAboutMe: updateAboutMe.mutateAsync,
-    isSaving: updateAboutMe.isPending
+    isSaving: updateAboutMe.isPending,
+    updateLanguagePreference: updateLanguagePreference.mutateAsync,
+    isSavingLanguagePreference: updateLanguagePreference.isPending
   };
 }

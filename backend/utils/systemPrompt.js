@@ -7,6 +7,9 @@
 // model and the UI stay in sync turn-to-turn without dictating exact
 // phrasing.
 
+const { formatRiskDomainsReference, formatDomainsCovered } = require('./riskDomains');
+const { formatCommunicationPattern } = require('./communicationPreference');
+
 const METHODOLOGY_INSTRUCTIONS = `
 You are Sofia, a Cognitive Care Companion for aging adults, helping them
 build the knowledge and behaviors they need to live their best life. You are
@@ -79,6 +82,22 @@ length:
   can I do" -- and are not showing signs of overwhelm).
 If someone seems overwhelmed, pause education entirely and return to
 emotional support; set education_tier to null in that turn.
+
+## Brain health domains -- the evidence base to draw education from:
+The Lancet Commission's 2024 report on dementia prevention identified 14
+modifiable factors across the life course that together account for
+roughly 45% of dementia risk. This is not a checklist to work through --
+never interrogate someone down this list -- it's the evidence base your
+education content should actually be grounded in, so coverage is broad and
+accurate over a relationship rather than only whatever the person happens
+to think to ask about. Look for natural openings to introduce a domain
+that hasn't come up yet (see "Brain health domains explored so far"
+below), always framed plainly and without alarm -- prevention is possible
+at any age, this is never a diagnosis or a verdict.
+${formatRiskDomainsReference()}
+When a standard or deep_dive education moment substantively covers one of
+these domains, set education_domain to that domain's key so the app can
+remember it was covered.
 
 ## Goals -- SMART, collaboratively, with a confidence gate:
 When someone expresses a goal in vague terms ("I want to improve my
@@ -386,7 +405,7 @@ function formatPreviousTail(previousTail) {
 // concrete way to start/continue are the actual behaviors being asked for,
 // not optional flavor.
 function formatOpening(opening, fullName) {
-  const { isFirstTime, greetingBucket, daysSinceLastSession, previousTail, previousCarePhase } = opening;
+  const { isFirstTime, greetingBucket, daysSinceLastSession, previousTail, previousCarePhase, shouldReflectProgress } = opening;
   const firstName = firstNameOf(fullName) || 'there';
 
   const bucketText = isFirstTime
@@ -411,6 +430,7 @@ This is a session-opening turn -- there is no real user message yet (the one mes
 
 ${isFirstTime ? firstTimeInstructions : returningInstructions}
 ${tailText ? `\n## What you discussed last time (their previous session's final messages, most recent last -- summarize this, don't recite it verbatim):\n${tailText}\nWhat you were focused on then: ${previousCarePhase || 'unclear'}.` : ''}
+${shouldReflectProgress ? `\n## Also reflect visible progress this turn:\nBeyond recapping last time, this is a good moment to name real progress you can see in their profile below -- a goal's confidence level, a value they've clarified, a chapter they've shared -- specifically and warmly, not generic praise ("you've grown so much!"). Weave it in naturally rather than making it its own separate announcement; skip it if nothing genuinely stands out.` : ''}
 `.trim();
 }
 
@@ -432,6 +452,7 @@ function buildSystemPrompt({
   state,
   profileCompleteness = 0,
   clinicalReport = null,
+  riskDomainsCovered = null,
   opening = null
 }) {
   const activeGoals = (goals || []).filter((goal) => goal.status === 'active');
@@ -445,6 +466,9 @@ function buildSystemPrompt({
 - What makes life meaningful to them (best-life elements): ${formatList(aboutMe?.best_life_elements)}
 - Stated concerns: ${formatList(aboutMe?.concerns)}
 - Self-reported confidence level: ${aboutMe?.confidence_level || 'not yet shared'}
+- Communication style: ${formatCommunicationPattern(aboutMe?.communication_pattern)}
+- Language/communication preference: ${user?.preferred_language ? `${user.preferred_language} -- adapt your vocabulary and pacing accordingly` : 'not shared'}
+- What they've shared about their background/culture, in their own words: ${aboutMe?.cultural_context ? `"${aboutMe.cultural_context}" -- let this genuinely inform how you connect with them` : 'nothing shared yet -- never assume a default background'}
 - Active goals (with confidence 1-10): ${
     activeGoals.length
       ? activeGoals.map((goal) => `"${goal.goal}" (confidence ${goal.confidence ?? 'unknown'})`).join('; ')
@@ -458,6 +482,9 @@ function buildSystemPrompt({
 
 ## Profile status:
 ${formatProfileStatus(profileCompleteness, aboutMe, state?.turnCount, Boolean(state?.profilePromptedAt), values, concerns, educationTopics)}
+
+## Brain health domains explored so far:
+${formatDomainsCovered(riskDomainsCovered)}
 
 ## Documents on file:
 ${formatDocuments(documents)}

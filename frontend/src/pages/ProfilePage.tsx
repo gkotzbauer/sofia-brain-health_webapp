@@ -4,10 +4,11 @@ import { ValuesSection } from '../components/profile/ValuesSection';
 import { ConcernsSection } from '../components/profile/ConcernsSection';
 import { EducationTopicsSection } from '../components/profile/EducationTopicsSection';
 import { DeleteAccountSection } from '../components/profile/DeleteAccountSection';
+import { LanguagePreferenceControl } from '../components/profile/LanguagePreferenceControl';
 import { TextSizeControl } from '../components/layout/TextSizeControl';
 
 export function ProfilePage() {
-  const { profile, isLoading, updateAboutMe, isSaving } = useProfile();
+  const { profile, isLoading, updateAboutMe, isSaving, updateLanguagePreference, isSavingLanguagePreference } = useProfile();
 
   return (
     <div className="profile-page">
@@ -17,6 +18,11 @@ export function ProfilePage() {
         <h2 id="display-settings-heading">Display settings</h2>
         <p className="section-intro">Adjust the text size to whatever's comfortable for you.</p>
         <TextSizeControl />
+        <LanguagePreferenceControl
+          preferredLanguage={profile?.user?.preferred_language}
+          onSave={updateLanguagePreference}
+          isSaving={isSavingLanguagePreference}
+        />
       </section>
 
       {isLoading ? (

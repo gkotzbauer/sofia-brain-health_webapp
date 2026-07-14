@@ -7,7 +7,8 @@ const NAV_LINKS = [
   { to: '/story', label: 'Story' },
   { to: '/documents', label: 'Documents' },
   { to: '/profile', label: 'About Me' },
-  { to: '/feedback', label: 'Share Your Thoughts' }
+  { to: '/feedback', label: 'Share Your Thoughts' },
+  { to: '/survey', label: 'Survey' }
 ];
 
 export function NavBar() {

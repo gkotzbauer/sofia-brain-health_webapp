@@ -8,7 +8,8 @@ import { api } from '../api/client';
 // admin view, out of scope here).
 export function useFeedback() {
   const submit = useMutation({
-    mutationFn: (data: { sessionId?: string; feedbackText: string }) => api.submitFeedback(data)
+    mutationFn: (data: { sessionId?: string; feedbackText: string; challengesText?: string; improvementsText?: string }) =>
+      api.submitFeedback(data)
   });
 
   return {

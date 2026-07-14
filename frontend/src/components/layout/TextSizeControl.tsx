@@ -1,10 +1,19 @@
 import { useTextSize } from '../../hooks/useTextSize';
 
-export function TextSizeControl() {
+interface TextSizeControlProps {
+  // Extra class for callers rendering this on a non-default background
+  // (e.g. ChatWindow's gradient header uses "on-hero" -- see global.css) --
+  // the control is global (backend/hooks/useTextSize.ts persists to
+  // localStorage and sets a document-level CSS variable), so it's safe to
+  // render in more than one place; they stay in sync automatically.
+  className?: string;
+}
+
+export function TextSizeControl({ className }: TextSizeControlProps = {}) {
   const { size, setSize, sizes } = useTextSize();
 
   return (
-    <div className="text-size-control" role="group" aria-label="Text size">
+    <div className={className ? `text-size-control ${className}` : 'text-size-control'} role="group" aria-label="Text size">
       {sizes.map((option) => (
         <button
           key={option}

@@ -46,12 +46,14 @@ export function AboutMeIntake({ aboutMe, onSave, isSaving }: AboutMeIntakeProps)
   const [bestLifeElements, setBestLifeElements] = useState<string[]>([]);
   const [concerns, setConcerns] = useState<string[]>([]);
   const [confidenceLevel, setConfidenceLevel] = useState<ConfidenceLevel | null>(null);
+  const [culturalContext, setCulturalContext] = useState('');
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setBestLifeElements(aboutMe?.best_life_elements || []);
     setConcerns(aboutMe?.concerns || []);
     setConfidenceLevel((aboutMe?.confidence_level as ConfidenceLevel) || null);
+    setCulturalContext(aboutMe?.cultural_context || '');
   }, [aboutMe]);
 
   function toggle(list: string[], setList: (next: string[]) => void, option: string) {
@@ -64,7 +66,8 @@ export function AboutMeIntake({ aboutMe, onSave, isSaving }: AboutMeIntakeProps)
       bestLifeElements,
       concerns,
       confidenceLevel: confidenceLevel || undefined,
-      userDefinedNextSteps: aboutMe?.user_defined_next_steps || []
+      userDefinedNextSteps: aboutMe?.user_defined_next_steps || [],
+      culturalContext: culturalContext.trim() || null
     });
     setSavedMessage('Saved. Sofia will use this to shape your conversations.');
   }
@@ -96,6 +99,20 @@ export function AboutMeIntake({ aboutMe, onSave, isSaving }: AboutMeIntakeProps)
         selected={confidenceLevel ? [confidenceLevel] : []}
         onToggle={(option) => setConfidenceLevel(option as ConfidenceLevel)}
       />
+
+      <div className="profile-detail-form profile-detail-form-stacked">
+        <label htmlFor="cultural-context-input">
+          Optional: is there anything about your background or how you like to communicate that would help Sofia connect
+          with you better?
+        </label>
+        <textarea
+          id="cultural-context-input"
+          rows={3}
+          value={culturalContext}
+          onChange={(event) => setCulturalContext(event.target.value)}
+          placeholder="Share as much or as little as you'd like -- this is entirely optional."
+        />
+      </div>
 
       <button type="button" onClick={handleSubmit} disabled={isSaving} className="save-button">
         {isSaving ? 'Saving...' : 'Save About Me'}

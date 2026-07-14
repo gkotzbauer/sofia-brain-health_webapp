@@ -40,7 +40,8 @@ async function loadUserContext(pool, userId) {
     ? {
         ...aboutMeRow,
         best_life_elements: decryptJSON(aboutMeRow.best_life_elements) || [],
-        concerns: decryptJSON(aboutMeRow.concerns) || []
+        concerns: decryptJSON(aboutMeRow.concerns) || [],
+        cultural_context: decryptField(aboutMeRow.cultural_context)
       }
     : null;
   const goals = goalsResult.rows.map((goal) => ({ ...goal, goal: decryptField(goal.goal) }));
@@ -55,8 +56,9 @@ async function loadUserContext(pool, userId) {
   const profileCompleteness = aboutMeRow?.profile_completeness ?? 0;
   const clinicalReportRow = clinicalReportResult.rows[0];
   const clinicalReport = clinicalReportRow ? decryptJSON(clinicalReportRow.report_data) : null;
+  const riskDomainsCovered = aboutMeRow ? decryptJSON(aboutMeRow.risk_domains_covered) || [] : [];
 
-  return { aboutMe, goals, chapters, documents, values, concerns, educationTopics, profileCompleteness, clinicalReport };
+  return { aboutMe, goals, chapters, documents, values, concerns, educationTopics, profileCompleteness, clinicalReport, riskDomainsCovered };
 }
 
 module.exports = { loadUserContext };

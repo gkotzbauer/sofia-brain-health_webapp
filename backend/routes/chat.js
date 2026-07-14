@@ -11,6 +11,8 @@ const { loadUserContext } = require('../utils/loadUserContext');
 const { buildMergedState } = require('../utils/turnState');
 const { MAX_CONTEXT_MESSAGES, CONTEXT_CAP_REALERT_INTERVAL } = require('../utils/chatConfig');
 const { logConversationTurn } = require('../utils/conversationTurnLog');
+const { recordDomainCovered } = require('../utils/riskDomains');
+const { recordCommunicationPattern } = require('../utils/communicationPreference');
 const llm = require('../utils/llm');
 
 // Warm, on-brand copy shown when the model call itself fails/times out --
@@ -53,8 +55,18 @@ router.post('/', chatLimiter, async (req, res) => {
     const existingState = session.state || {};
     const existingLog = decryptJSON(session.conversation_log) || [];
 
-    const { aboutMe, goals, chapters, documents, values, concerns, educationTopics, profileCompleteness, clinicalReport } =
-      await loadUserContext(req.pool, userId);
+    const {
+      aboutMe,
+      goals,
+      chapters,
+      documents,
+      values,
+      concerns,
+      educationTopics,
+      profileCompleteness,
+      clinicalReport,
+      riskDomainsCovered
+    } = await loadUserContext(req.pool, userId);
 
     const systemBlocks = buildSystemPrompt({
       user: req.user,
@@ -67,7 +79,8 @@ router.post('/', chatLimiter, async (req, res) => {
       educationTopics,
       state: existingState,
       profileCompleteness,
-      clinicalReport
+      clinicalReport,
+      riskDomainsCovered
     });
 
     // Only the most recent MAX_CONTEXT_MESSAGES entries go to the model; the
@@ -236,6 +249,13 @@ router.post('/', chatLimiter, async (req, res) => {
       mergedState,
       latencyMs: Date.now() - generateStartedAt
     });
+
+    if (turn.education_domain) {
+      await recordDomainCovered(req.pool, req.logger, userId, turn.education_domain);
+    }
+    if (turn.adaptive_pattern) {
+      await recordCommunicationPattern(req.pool, req.logger, userId, turn.adaptive_pattern);
+    }
 
     await req.auditLog(userId, 'CHAT_MESSAGE', 'sessions', sessionId, req);
 

@@ -7,6 +7,7 @@ import { ContextCapNotice } from './ContextCapNotice';
 import { QuickReplies } from './QuickReplies';
 import { InlineAboutMePicker } from './InlineAboutMePicker';
 import { InlinePendingConfirmation } from './InlinePendingConfirmation';
+import { TextSizeControl } from '../layout/TextSizeControl';
 
 export function ChatWindow() {
   const { messages, sendMessage, isLoading, isSending, error, lastSafety, state, connectFailed, retryConnect } = useConversation();
@@ -27,8 +28,17 @@ export function ChatWindow() {
   return (
     <div className="chat-window">
       <div className="chat-hero">
-        <h1>🧭 Sofia</h1>
-        <p>Your Cognitive Care Companion -- writing your brain health story together</p>
+        <div className="chat-hero-row">
+          <div className="chat-hero-title">
+            <h1>🧭 Sofia</h1>
+            <p>Your Cognitive Care Companion -- writing your brain health story together</p>
+          </div>
+          {/* Previously only reachable from the Profile page -- moved here too
+              since chat is the surface people actually use most, and vision-
+              related reading difficulty is one of the Lancet Commission's
+              highest-leverage, most under-treated risk factors. */}
+          <TextSizeControl className="on-hero" />
+        </div>
       </div>
       <div className="chat-body">
         <div className="chat-log" ref={logRef} aria-live="polite" aria-relevant="additions">

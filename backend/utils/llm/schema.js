@@ -5,6 +5,8 @@
 // NOT using OpenAI "strict" structured outputs (which forbids optional
 // properties and nullable unions) so the same loose schema -- and the same
 // reliability characteristics -- apply to both providers.
+const { RISK_DOMAIN_KEYS } = require('../riskDomains');
+
 const SOFIA_TURN_TOOL_NAME = 'sofia_turn_response';
 
 const SOFIA_TURN_TOOL_DESCRIPTION =
@@ -28,6 +30,12 @@ const SOFIA_TURN_PARAMETERS = {
     education_tier: {
       type: ['string', 'null'],
       enum: ['micro', 'standard', 'deep_dive', null]
+    },
+    education_domain: {
+      type: ['string', 'null'],
+      description:
+        "Only set when this turn's reply delivers a standard or deep_dive education moment that substantively covers one of these specific Lancet Commission risk-factor domains (see 'Brain health domains' in the system prompt) -- not for micro moments, general conversation, or education on something outside this list. Leave null otherwise.",
+      enum: [...RISK_DOMAIN_KEYS, null]
     },
     adaptive_pattern: {
       type: ['string', 'null'],

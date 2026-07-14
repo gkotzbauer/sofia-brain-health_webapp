@@ -6,6 +6,8 @@ const { loadUserContext } = require('../utils/loadUserContext');
 const { buildMergedState } = require('../utils/turnState');
 const { MAX_CONTEXT_MESSAGES } = require('../utils/chatConfig');
 const { logConversationTurn } = require('../utils/conversationTurnLog');
+const { recordDomainCovered } = require('../utils/riskDomains');
+const { recordCommunicationPattern } = require('../utils/communicationPreference');
 const llm = require('../utils/llm');
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -13,6 +15,12 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 // "what we discussed last time" continuity -- enough for a real recap
 // without ballooning the opening turn's token cost.
 const PREVIOUS_TAIL_LIMIT = 6;
+// How often (in sessions) to prompt Sofia to proactively reflect visible
+// progress back to the person, distinct from the every-session "what we
+// discussed last time" recap -- every session would get repetitive/hollow,
+// but never doing it leaves real progress (goal confidence climbing, a
+// meaningful chapter recorded) invisible unless the person thinks to ask.
+const PROGRESS_REFLECTION_INTERVAL = 3;
 
 function greetingBucketFor(daysSinceLastSession) {
   if (daysSinceLastSession <= 0) return 'returningToday';
@@ -27,7 +35,7 @@ function greetingBucketFor(daysSinceLastSession) {
 // conversation_log/state on success. Never throws -- a failure here must
 // not prevent session creation; the frontend falls back to a static
 // greeting when conversation_log comes back empty (see ChatWindow.tsx).
-async function attachOpeningTurn(req, session, userId) {
+async function attachOpeningTurn(req, session, userId, totalSessions) {
   if (!llm.isConfigured()) return;
 
   try {
@@ -51,8 +59,25 @@ async function attachOpeningTurn(req, session, userId) {
     const previousTail = previousLog.length ? previousLog.slice(-PREVIOUS_TAIL_LIMIT) : null;
     const previousCarePhase = previousSession?.state?.carePhase || null;
 
-    const { aboutMe, goals, chapters, documents, values, concerns, educationTopics, profileCompleteness, clinicalReport } =
-      await loadUserContext(req.pool, userId);
+    const {
+      aboutMe,
+      goals,
+      chapters,
+      documents,
+      values,
+      concerns,
+      educationTopics,
+      profileCompleteness,
+      clinicalReport,
+      riskDomainsCovered
+    } = await loadUserContext(req.pool, userId);
+
+    const activeGoalsForReflection = (goals || []).filter((goal) => goal.status === 'active');
+    const shouldReflectProgress =
+      Boolean(totalSessions) &&
+      totalSessions > 1 &&
+      totalSessions % PROGRESS_REFLECTION_INTERVAL === 0 &&
+      (activeGoalsForReflection.length > 0 || (chapters || []).length > 0);
 
     const systemBlocks = buildSystemPrompt({
       user: req.user,
@@ -66,12 +91,14 @@ async function attachOpeningTurn(req, session, userId) {
       state: {},
       profileCompleteness,
       clinicalReport,
+      riskDomainsCovered,
       opening: {
         isFirstTime,
         greetingBucket,
         daysSinceLastSession,
         previousTail,
-        previousCarePhase
+        previousCarePhase,
+        shouldReflectProgress
       }
     });
 
@@ -125,6 +152,13 @@ async function attachOpeningTurn(req, session, userId) {
       mergedState,
       latencyMs: Date.now() - generateStartedAt
     });
+
+    if (turn.education_domain) {
+      await recordDomainCovered(req.pool, req.logger, userId, turn.education_domain);
+    }
+    if (turn.adaptive_pattern) {
+      await recordCommunicationPattern(req.pool, req.logger, userId, turn.adaptive_pattern);
+    }
 
     session.conversation_log = encryptJSON(openingLog);
     session.state = mergedState;
@@ -193,17 +227,19 @@ router.post('/', async (req, res) => {
     );
     const session = result.rows[0];
 
-    // Update user's total sessions
-    await req.pool.query(
-      'UPDATE users SET total_sessions = total_sessions + 1 WHERE id = $1',
+    // Update user's total sessions -- also feeds attachOpeningTurn's
+    // periodic progress-reflection gate below.
+    const totalSessionsResult = await req.pool.query(
+      'UPDATE users SET total_sessions = total_sessions + 1 WHERE id = $1 RETURNING total_sessions',
       [userId]
     );
+    const totalSessions = totalSessionsResult.rows[0].total_sessions;
 
     await req.auditLog(userId, 'SESSION_CREATED', 'sessions', session.id, req);
 
     // Sofia speaks first -- see attachOpeningTurn above. Never fails session
     // creation; on any error the session is simply returned with an empty log.
-    await attachOpeningTurn(req, session, userId);
+    await attachOpeningTurn(req, session, userId, totalSessions);
 
     res.json(decryptSession(session));
   } catch (error) {

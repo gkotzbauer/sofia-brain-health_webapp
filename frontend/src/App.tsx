@@ -9,6 +9,7 @@ import { GoalsPage } from './pages/GoalsPage';
 import { StoryPage } from './pages/StoryPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { FeedbackPage } from './pages/FeedbackPage';
+import { StudySurveyPage } from './pages/StudySurveyPage';
 import { ClinicianPage } from './pages/ClinicianPage';
 import { ClinicianSessionPage } from './pages/ClinicianSessionPage';
 import { useAuth } from './hooks/useAuth';
@@ -79,6 +80,14 @@ export function App() {
           element={
             <RequireAuth>
               <FeedbackPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/survey"
+          element={
+            <RequireAuth>
+              <StudySurveyPage />
             </RequireAuth>
           }
         />

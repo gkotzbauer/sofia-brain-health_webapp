@@ -9,7 +9,9 @@ function decryptAboutMe(row) {
   return {
     ...row,
     best_life_elements: decryptJSON(row.best_life_elements) || [],
-    concerns: decryptJSON(row.concerns) || []
+    concerns: decryptJSON(row.concerns) || [],
+    cultural_context: decryptField(row.cultural_context),
+    risk_domains_covered: decryptJSON(row.risk_domains_covered) || []
   };
 }
 
@@ -102,7 +104,7 @@ router.get('/profile', async (req, res) => {
 // profile_variable_history rows distinctly from a manual edit (see
 // profile_variable_history.source, already used elsewhere to distinguish
 // 'manual' from 'document').
-async function updateAboutMe(pool, userId, { bestLifeElements, concerns, confidenceLevel, userDefinedNextSteps }, options = {}) {
+async function updateAboutMe(pool, userId, { bestLifeElements, concerns, confidenceLevel, userDefinedNextSteps, culturalContext }, options = {}) {
   const source = options.source || 'manual';
   const sourceDetails = options.sourceDetails || { action: 'about_me_update', timestamp: new Date().toISOString() };
 
@@ -110,6 +112,11 @@ async function updateAboutMe(pool, userId, { bestLifeElements, concerns, confide
   const current = currentResult.rows[0];
   const currentBestLifeElements = current ? decryptJSON(current.best_life_elements) || [] : [];
   const currentConcerns = current ? decryptJSON(current.concerns) || [] : [];
+  // Callers that don't know about cultural_context (routes/documents.js's
+  // apply-extraction, older clients) simply pass nothing, leaving whatever
+  // was already there untouched rather than clearing it.
+  const currentCulturalContext = current ? decryptField(current.cultural_context) : null;
+  const finalCulturalContext = culturalContext !== undefined ? culturalContext : currentCulturalContext;
 
   if (current) {
     if (JSON.stringify(currentBestLifeElements) !== JSON.stringify(bestLifeElements)) {
@@ -138,19 +145,29 @@ async function updateAboutMe(pool, userId, { bestLifeElements, concerns, confide
         [userId, 'confidenceLevel', encryptField(confidenceLevel), encryptField(current.confidence_level), source, encryptJSON(sourceDetails)]
       );
     }
+
+    if (currentCulturalContext !== finalCulturalContext) {
+      await pool.query(
+        `INSERT INTO profile_variable_history
+         (user_id, variable_name, variable_value, previous_value, source, source_details)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, 'culturalContext', encryptField(finalCulturalContext), encryptField(currentCulturalContext), source, encryptJSON(sourceDetails)]
+      );
+    }
   }
 
   const result = await pool.query(
     `UPDATE about_me_profiles
      SET best_life_elements = $1, concerns = $2, confidence_level = $3,
-         user_defined_next_steps = $4, profile_completeness = $5
-     WHERE user_id = $6 RETURNING *`,
+         user_defined_next_steps = $4, profile_completeness = $5, cultural_context = $6
+     WHERE user_id = $7 RETURNING *`,
     [
       encryptJSON(bestLifeElements),
       encryptJSON(concerns),
       confidenceLevel,
       JSON.stringify(userDefinedNextSteps),
       calculateCompleteness(bestLifeElements, concerns, confidenceLevel),
+      encryptField(finalCulturalContext),
       userId
     ]
   );
@@ -162,9 +179,9 @@ async function updateAboutMe(pool, userId, { bestLifeElements, concerns, confide
 router.put('/about-me', async (req, res) => {
   try {
     const userId = req.user.id;
-    const { bestLifeElements, concerns, confidenceLevel, userDefinedNextSteps } = req.body;
+    const { bestLifeElements, concerns, confidenceLevel, userDefinedNextSteps, culturalContext } = req.body;
 
-    const updated = await updateAboutMe(req.pool, userId, { bestLifeElements, concerns, confidenceLevel, userDefinedNextSteps });
+    const updated = await updateAboutMe(req.pool, userId, { bestLifeElements, concerns, confidenceLevel, userDefinedNextSteps, culturalContext });
 
     await req.auditLog(userId, 'ABOUT_ME_UPDATED', 'about_me_profiles', updated.id, req);
 
@@ -172,6 +189,32 @@ router.put('/about-me', async (req, res) => {
   } catch (error) {
     req.logger.error('About Me update error:', error);
     res.status(500).json({ error: 'Failed to update About Me profile' });
+  }
+});
+
+// Optional, freeform language/communication-simplicity preference (e.g.
+// "Spanish", "English -- please keep it simple"). Full translation/i18n is
+// out of scope today -- this captures intent now so Sofia can adapt
+// vocabulary/pacing (see utils/systemPrompt.js) and so real localization
+// work later can be prioritized by what people actually ask for. Plain
+// column, not encrypted -- a short language name isn't PHI, matching how
+// users.name/age are already stored unencrypted.
+router.put('/language-preference', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { preferredLanguage } = req.body;
+
+    const result = await req.pool.query(
+      'UPDATE users SET preferred_language = $1 WHERE id = $2 RETURNING id, preferred_language',
+      [preferredLanguage || null, userId]
+    );
+
+    await req.auditLog(userId, 'LANGUAGE_PREFERENCE_UPDATED', 'users', userId, req);
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    req.logger.error('Language preference update error:', error);
+    res.status(500).json({ error: 'Failed to update language preference' });
   }
 });
 

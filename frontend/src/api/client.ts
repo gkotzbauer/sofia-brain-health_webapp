@@ -68,6 +68,8 @@ export interface SofiaUser {
   email: string;
   age: string | null;
   role: 'user' | 'clinician' | 'admin';
+  preferred_language?: string | null;
+  total_sessions?: number;
 }
 
 export interface AuthResponse {
@@ -149,6 +151,9 @@ export interface AboutMe {
   concerns: string[];
   confidence_level: string | null;
   user_defined_next_steps: string[];
+  cultural_context?: string | null;
+  risk_domains_covered?: string[];
+  communication_pattern?: string | null;
   [key: string]: unknown;
 }
 
@@ -380,6 +385,8 @@ export interface EducationTopicItem {
 export interface FeedbackItem {
   id: string;
   feedback_text: string;
+  challenges_text?: string | null;
+  improvements_text?: string | null;
   created_at: string;
   [key: string]: unknown;
 }
@@ -396,6 +403,49 @@ export interface ClinicalAlert {
   acknowledged: boolean;
   created_at: string;
   [key: string]: unknown;
+}
+
+// Mirrors backend/utils/studySurveyQuestions.js -- the canonical 16-
+// question feasibility study instrument, served from the backend so
+// question wording lives in exactly one place.
+export type SurveyScale = 'likelihood' | 'agreement' | 'confidence' | 'open';
+export type SurveySection = 'feasibility' | 'quality_of_life' | 'confidence_capability' | 'adaptability';
+
+export interface StudySurveyQuestion {
+  key: string;
+  section: SurveySection;
+  nptConstruct: string | null;
+  scale: SurveyScale;
+  text: string;
+}
+
+export interface StudySurveyQuestionsResult {
+  surveyVersion: string;
+  questions: StudySurveyQuestion[];
+}
+
+export interface StudySurveyResponse {
+  id: string;
+  user_id: string;
+  submission_id: string;
+  survey_version: string;
+  question_key: string;
+  rating: number | null;
+  explanation: string | null;
+  created_at: string;
+}
+
+export interface StudySurveyAnswerInput {
+  questionKey: string;
+  rating?: number;
+  explanation?: string;
+}
+
+export interface StudySurveySummaryRow {
+  questionKey: string;
+  ratedCount: number;
+  averageRating: number | null;
+  responseCount: number;
 }
 
 export const api = {
@@ -416,6 +466,11 @@ export const api = {
     request<{ user: SofiaUser; aboutMe: AboutMe; storyChapters: StoryChapter[]; goals: Goal[] }>('/users/profile'),
   updateAboutMe: (data: Partial<AboutMe>) =>
     request<AboutMe>('/users/about-me', { method: 'PUT', body: JSON.stringify(data) }),
+  updateLanguagePreference: (preferredLanguage: string) =>
+    request<{ id: string; preferred_language: string | null }>('/users/language-preference', {
+      method: 'PUT',
+      body: JSON.stringify({ preferredLanguage })
+    }),
   deleteAccount: (password: string) =>
     request<{ success: boolean; message: string }>('/users/me', { method: 'DELETE', body: JSON.stringify({ password }) }),
 
@@ -471,7 +526,7 @@ export const api = {
       body: JSON.stringify({ report })
     }),
 
-  submitFeedback: (data: { sessionId?: string; feedbackText: string }) =>
+  submitFeedback: (data: { sessionId?: string; feedbackText: string; challengesText?: string; improvementsText?: string }) =>
     request<FeedbackItem>('/feedback', { method: 'POST', body: JSON.stringify(data) }),
 
   listPendingClinicalAlerts: () => request<ClinicalAlert[]>('/admin/clinical-alerts/pending'),
@@ -480,5 +535,14 @@ export const api = {
 
   getClinicianSession: (sessionId: string) => request<SofiaSession & { user_name: string }>(`/admin/sessions/${sessionId}`),
   sendClinicianMessage: (sessionId: string, message: string) =>
-    request<SofiaSession>(`/admin/sessions/${sessionId}/messages`, { method: 'POST', body: JSON.stringify({ message }) })
+    request<SofiaSession>(`/admin/sessions/${sessionId}/messages`, { method: 'POST', body: JSON.stringify({ message }) }),
+
+  getStudySurveyQuestions: () => request<StudySurveyQuestionsResult>('/study-survey/questions'),
+  submitStudySurveyResponses: (responses: StudySurveyAnswerInput[]) =>
+    request<{ submissionId: string; responses: StudySurveyResponse[] }>('/study-survey/responses', {
+      method: 'POST',
+      body: JSON.stringify({ responses })
+    }),
+  getMyStudySurveyResponses: () => request<StudySurveyResponse[]>('/study-survey/responses/mine'),
+  getStudySurveySummary: () => request<StudySurveySummaryRow[]>('/study-survey/responses/summary')
 };

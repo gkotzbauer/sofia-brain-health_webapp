@@ -10,25 +10,37 @@ export function FeedbackPanel() {
   const { sessionId } = useConversation();
   const { submitFeedback, isSubmitting, submitError } = useFeedback();
   const [feedbackText, setFeedbackText] = useState('');
-  const [sentLog, setSentLog] = useState<string[]>([]);
+  const [challengesText, setChallengesText] = useState('');
+  const [improvementsText, setImprovementsText] = useState('');
+  const [sentCount, setSentCount] = useState(0);
+
+  // Any one of the three optional prompts is enough to submit -- a direct
+  // question ("did you run into any challenges?") surfaces more than a
+  // single open textarea on its own, so these are offered alongside it
+  // rather than requiring all three.
+  const hasContent = Boolean(feedbackText.trim() || challengesText.trim() || improvementsText.trim());
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const trimmed = feedbackText.trim();
-    if (!trimmed) return;
-    await submitFeedback({ sessionId: sessionId || undefined, feedbackText: trimmed });
-    setSentLog((log) => [trimmed, ...log]);
+    if (!hasContent) return;
+    await submitFeedback({
+      sessionId: sessionId || undefined,
+      feedbackText: feedbackText.trim(),
+      challengesText: challengesText.trim() || undefined,
+      improvementsText: improvementsText.trim() || undefined
+    });
+    setSentCount((count) => count + 1);
     setFeedbackText('');
+    setChallengesText('');
+    setImprovementsText('');
   }
 
   return (
     <div className="feedback-panel">
-      <p className="section-intro">How was this conversation? Any suggestions help us improve.</p>
+      <p className="section-intro">How was this conversation? Any of the below helps us improve -- answer whichever feels relevant.</p>
 
       <form onSubmit={handleSubmit}>
-        <label htmlFor="feedback-text" className="visually-hidden">
-          Your feedback
-        </label>
+        <label htmlFor="feedback-text">General feedback</label>
         <textarea
           id="feedback-text"
           rows={3}
@@ -37,24 +49,41 @@ export function FeedbackPanel() {
           onChange={(event) => setFeedbackText(event.target.value)}
           disabled={isSubmitting}
         />
+
+        <label htmlFor="feedback-challenges">Did you run into any challenges using Sofia?</label>
+        <textarea
+          id="feedback-challenges"
+          rows={2}
+          placeholder="Optional -- anything that got in your way?"
+          value={challengesText}
+          onChange={(event) => setChallengesText(event.target.value)}
+          disabled={isSubmitting}
+        />
+
+        <label htmlFor="feedback-improvements">What would help you use Sofia more regularly?</label>
+        <textarea
+          id="feedback-improvements"
+          rows={2}
+          placeholder="Optional -- what would make this easier to stick with?"
+          value={improvementsText}
+          onChange={(event) => setImprovementsText(event.target.value)}
+          disabled={isSubmitting}
+        />
+
         {submitError && (
           <p className="form-error" role="alert">
             {submitError}
           </p>
         )}
-        <button type="submit" className="button-primary" disabled={isSubmitting || !feedbackText.trim()}>
+        <button type="submit" className="button-primary" disabled={isSubmitting || !hasContent}>
           {isSubmitting ? 'Sending...' : 'Submit feedback'}
         </button>
       </form>
 
-      {sentLog.length > 0 && (
-        <div className="feedback-log">
-          {sentLog.map((text, index) => (
-            <p key={index} className="feedback-confirmation" role="status">
-              Thank you -- shared: "{text}"
-            </p>
-          ))}
-        </div>
+      {sentCount > 0 && (
+        <p className="feedback-confirmation" role="status">
+          Thank you -- your feedback was shared.
+        </p>
       )}
     </div>
   );
