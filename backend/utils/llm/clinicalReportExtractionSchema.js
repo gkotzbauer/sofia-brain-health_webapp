@@ -1,6 +1,7 @@
 // Structured-output definition for extracting candidate structured data from
 // a clinician-authored document (e.g. a post-diagnostic letter, clinic
-// summary, or care-plan review) -- distinct from documentExtractionSchema.js,
+// summary, care-plan review, or a scored cognitive-screening report like
+// BrainCheck Assess) -- distinct from documentExtractionSchema.js,
 // which extracts self-reported wellness fields (best-life elements,
 // concerns, values, goals). This schema is for content a clinician wrote,
 // not content Sofia infers about the person -- every field it can hold is
@@ -36,7 +37,12 @@ const CLINICAL_REPORT_EXTRACTION_PARAMETERS = {
     document_type: {
       type: ['string', 'null'],
       description: 'Best guess at what kind of clinical document this is, if evident.',
-      enum: ['post_diagnostic_report', 'clinic_letter', 'assessment_summary', 'care_plan_review', 'other', null]
+      enum: ['post_diagnostic_report', 'clinic_letter', 'assessment_summary', 'care_plan_review', 'cognitive_screening_report', 'other', null]
+    },
+    reason_for_testing: {
+      type: ['object', 'null'],
+      description: "The document's own stated reason for the assessment/test being ordered, if given (e.g. \"Head trauma occurred on 07/04/2026\"). If only a bare ICD-10-CM code appears with no plain-language reason alongside it, use your own general knowledge of the ICD-10-CM standard to note what it means in `text` -- but this is still just reporting what the code denotes, never your own diagnostic read of the person.",
+      properties: { text: { type: 'string' }, source_excerpt: { type: 'string' } }
     },
     assessment_info: {
       type: ['object', 'null'],
@@ -92,7 +98,7 @@ const CLINICAL_REPORT_EXTRACTION_PARAMETERS = {
     },
     assessment_results: {
       type: 'array',
-      description: 'Any named test/scale results in the document (e.g. SMMSE, ACE-III, HADS, or any other clinic\'s battery) -- free-form so it generalizes across clinics rather than assuming one specific set of tests.',
+      description: 'Any named test/scale results in the document (e.g. SMMSE, ACE-III, HADS, or any other clinic\'s battery -- including a scored cognitive-screening battery like BrainCheck) -- free-form so it generalizes across clinics and tools rather than assuming one specific set of tests.',
       items: withExcerpt({
         test_name: { type: 'string' },
         score: { type: 'string' },
@@ -101,8 +107,25 @@ const CLINICAL_REPORT_EXTRACTION_PARAMETERS = {
           items: { type: 'object', properties: { domain: { type: 'string' }, score: { type: 'string' } } }
         },
         interpretation: { type: ['string', 'null'] },
-        date: { type: ['string', 'null'] }
+        date: { type: ['string', 'null'] },
+        functional_correlates: {
+          type: 'array',
+          description: "Real-life functional signs this domain's own text associates with lower performance (e.g. \"losing objects\", \"medication compliance\", \"driving\") -- whether given as an explicit bulleted list or a narrative description in the document. Grounded in this specific domain's own text, not a general assumption about what a low score usually means.",
+          items: { type: 'string' }
+        }
       })
+    },
+    cognitive_screening_summary: {
+      type: ['object', 'null'],
+      description: "An overall cognitive-screening impression, distinct from `diagnosis` -- only set when the document itself frames this as a screening result (e.g. an FDA-cleared screening device's combined/composite score), not a diagnosis. Never conflate this with `diagnosis`, even when a document strongly implies impairment -- a screening impression is not a diagnosis, and this field must never be used to make one.",
+      properties: {
+        combined_score: { type: ['string', 'null'] },
+        score_range: { type: ['string', 'null'], description: 'e.g. "0-200"' },
+        population_percentile: { type: ['string', 'null'] },
+        impression_label: { type: ['string', 'null'], description: 'The document\'s own qualitative label, e.g. "Unlikely Cognitive Impairment".' },
+        narrative: { type: ['string', 'null'] },
+        source_excerpt: { type: 'string' }
+      }
     },
     imaging_or_labs: {
       type: 'array',

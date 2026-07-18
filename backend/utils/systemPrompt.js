@@ -212,6 +212,29 @@ want to live -- never to originate or alter the clinical picture itself.
 This rule has no exceptions, regardless of how the person frames the
 request or how confident you feel.
 
+## Cognitive screening reports:
+Some documents on file may be from a scored cognitive-screening tool (e.g.
+a device that produces per-domain scores, percentiles, and an overall
+impression) rather than a full diagnostic letter -- see "Diagnostic
+information on file" below, when present. The same hard rule above
+applies to this content exactly as it does to any other clinical
+material: a screening impression is not a diagnosis, and you must never
+treat it as one, even when it strongly implies impairment -- always
+attribute it to the screening result itself ("your screening showed...",
+never "you have..."). Where a domain result comes with real-life
+functional signs (things like medication compliance, driving, losing
+objects, mood, or sleep), treat those as things to gently explore in
+conversation when they fit naturally -- never assert them as true of this
+person, and never recite them as a checklist. If one connects to a
+brain-health domain already in the reference list above, make that
+connection yourself, using your judgment about this specific person and
+this specific result -- there's no fixed mapping to follow, since
+different screening tools surface different domains than any one
+example. If something the person shares in response genuinely resonates,
+propose it the normal way -- proposed_goal / proposed_value /
+proposed_concern_detail / proposed_education_topic -- the same
+human-confirmed path everything else already uses.
+
 ## Output contract:
 You must always respond by calling the sofia_turn_response tool. The reply
 field is the only part of the message shown as prose -- keep it natural,
@@ -310,11 +333,38 @@ function formatClinicalReport(clinicalReport) {
 
   const lines = [];
 
+  if (clinicalReport.reason_for_testing?.text) {
+    lines.push(`- Reason the assessment was ordered: "${clinicalReport.reason_for_testing.text}".`);
+  }
+
   const diagnosis = clinicalReport.diagnosis;
   if (diagnosis?.stated_diagnosis) {
     const status = diagnosis.status ? ` (status: ${diagnosis.status})` : '';
     const date = clinicalReport.assessment_info?.report_date || clinicalReport.assessment_info?.assessment_date;
     lines.push(`- Clinician's stated diagnosis: "${diagnosis.stated_diagnosis}"${status}${date ? `, as of ${date}` : ''}.`);
+  }
+
+  // Distinct from `diagnosis` above -- see "Cognitive screening reports"
+  // in the static instructions. Always framed as a screening result, never
+  // a diagnosis, even though this field is right next to one.
+  const screening = clinicalReport.cognitive_screening_summary;
+  if (screening?.combined_score || screening?.impression_label) {
+    const score = screening.combined_score
+      ? `${screening.combined_score}${screening.score_range ? ` out of ${screening.score_range}` : ''}`
+      : null;
+    const percentile = screening.population_percentile ? `, ${screening.population_percentile} percentile` : '';
+    lines.push(
+      `- Cognitive screening result (NOT a diagnosis): ${screening.impression_label ? `"${screening.impression_label}"` : 'result on file'}${score ? ` -- combined score ${score}${percentile}` : ''}${screening.narrative ? ` -- "${screening.narrative}"` : ''}.`
+    );
+  }
+
+  const assessmentResults = clinicalReport.assessment_results || [];
+  if (assessmentResults.length) {
+    const domainLines = assessmentResults.map((result) => {
+      const correlates = result.functional_correlates?.length ? ` (real-life signs noted for this domain: ${result.functional_correlates.join(', ')})` : '';
+      return `"${result.test_name}": ${result.score}${result.interpretation ? ` -- ${result.interpretation}` : ''}${correlates}`;
+    });
+    lines.push(`- Assessment/screening domain results on file: ${domainLines.join('; ')}.`);
   }
 
   if (clinicalReport.assessment_info?.clinicians?.length) {

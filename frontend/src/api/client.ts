@@ -302,6 +302,19 @@ export interface ClinicalReportAssessmentResult {
   subscores?: ClinicalReportSubscore[];
   interpretation?: string | null;
   date?: string | null;
+  functional_correlates?: string[];
+  source_excerpt: string;
+}
+export interface ClinicalReportCognitiveScreeningSummary {
+  combined_score?: string | null;
+  score_range?: string | null;
+  population_percentile?: string | null;
+  impression_label?: string | null;
+  narrative?: string | null;
+  source_excerpt: string;
+}
+export interface ClinicalReportReasonForTesting {
+  text: string;
   source_excerpt: string;
 }
 export interface ClinicalReportImagingOrLab {
@@ -335,8 +348,10 @@ export interface ClinicalReportSupportResource {
 
 export interface ClinicalReportCandidates {
   document_type?: string | null;
+  reason_for_testing?: ClinicalReportReasonForTesting | null;
   assessment_info?: ClinicalReportAssessmentInfo | null;
   diagnosis?: ClinicalReportDiagnosis | null;
+  cognitive_screening_summary?: ClinicalReportCognitiveScreeningSummary | null;
   patient_background?: ClinicalReportBackground | null;
   current_symptoms?: ClinicalReportSymptoms | null;
   assessment_results?: ClinicalReportAssessmentResult[];

@@ -3,6 +3,7 @@ import {
   ClinicalReportAssessmentResult,
   ClinicalReportCandidates,
   ClinicalReportCarePlanItem,
+  ClinicalReportCognitiveScreeningSummary,
   ClinicalReportDiagnosis,
   ClinicalReportImagingOrLab,
   ClinicalReportSafetyRiskNotes,
@@ -47,6 +48,10 @@ export function ClinicalReportReviewModal({ documentId, candidates, onClose }: C
   const [diagnosis, setDiagnosis] = useState<(ClinicalReportDiagnosis & { accepted: boolean }) | null>(() =>
     candidates.diagnosis ? { ...candidates.diagnosis, accepted: false } : null
   );
+
+  const [screeningSummary, setScreeningSummary] = useState<
+    (ClinicalReportCognitiveScreeningSummary & { accepted: boolean }) | null
+  >(() => (candidates.cognitive_screening_summary ? { ...candidates.cognitive_screening_summary, accepted: false } : null));
 
   const [cognitive, setCognitive] = useState(() => toTextItems(candidates.current_symptoms?.cognitive));
   const [physical, setPhysical] = useState(() => toTextItems(candidates.current_symptoms?.physical));
@@ -99,6 +104,7 @@ export function ClinicalReportReviewModal({ documentId, candidates, onClose }: C
 
   const totalAccepted =
     (diagnosis?.accepted ? 1 : 0) +
+    (screeningSummary?.accepted ? 1 : 0) +
     cognitive.filter((i) => i.accepted).length +
     physical.filter((i) => i.accepted).length +
     sleep.filter((i) => i.accepted).length +
@@ -114,7 +120,8 @@ export function ClinicalReportReviewModal({ documentId, candidates, onClose }: C
   async function handleSave() {
     const report: ClinicalReportCandidates = {
       document_type: candidates.document_type,
-      assessment_info: candidates.assessment_info
+      assessment_info: candidates.assessment_info,
+      reason_for_testing: candidates.reason_for_testing
     };
 
     if (diagnosis?.accepted && diagnosis.stated_diagnosis.trim()) {
@@ -124,6 +131,11 @@ export function ClinicalReportReviewModal({ documentId, candidates, onClose }: C
         status: diagnosis.status,
         source_excerpt: diagnosis.source_excerpt
       };
+    }
+
+    if (screeningSummary?.accepted) {
+      const { accepted: _accepted, ...rest } = screeningSummary;
+      report.cognitive_screening_summary = rest;
     }
 
     const acceptedCognitive = cognitive.filter((i) => i.accepted && i.value.trim());
@@ -182,8 +194,15 @@ export function ClinicalReportReviewModal({ documentId, candidates, onClose }: C
           interpretation of a symptom or score.
         </p>
 
+        {candidates.reason_for_testing?.text && (
+          <p className="section-intro">
+            <strong>Reason for testing:</strong> {candidates.reason_for_testing.text}
+          </p>
+        )}
+
         {totalAccepted === 0 &&
           !diagnosis &&
+          !screeningSummary &&
           cognitive.length === 0 &&
           physical.length === 0 &&
           sleep.length === 0 &&
@@ -209,6 +228,30 @@ export function ClinicalReportReviewModal({ documentId, candidates, onClose }: C
               onAcceptedChange={(accepted) => setDiagnosis((current) => (current ? { ...current, accepted } : current))}
             >
               {diagnosis.status && <p className="review-item-hint">Status: {diagnosis.status}</p>}
+            </DocumentReviewItem>
+          </section>
+        )}
+
+        {screeningSummary && (
+          <section aria-labelledby="review-screening-heading" className="clinical-report-screening-callout">
+            <h3 id="review-screening-heading">Screening result -- not a diagnosis</h3>
+            <DocumentReviewItem
+              id="clinical-screening-summary"
+              label={screeningSummary.impression_label || 'Screening result'}
+              value={screeningSummary.narrative || ''}
+              sourceExcerpt={screeningSummary.source_excerpt}
+              accepted={screeningSummary.accepted}
+              onValueChange={(value) => setScreeningSummary((current) => (current ? { ...current, narrative: value } : current))}
+              onAcceptedChange={(accepted) => setScreeningSummary((current) => (current ? { ...current, accepted } : current))}
+            >
+              {(screeningSummary.combined_score || screeningSummary.population_percentile) && (
+                <p className="review-item-hint">
+                  {screeningSummary.combined_score
+                    ? `Score: ${screeningSummary.combined_score}${screeningSummary.score_range ? ` / ${screeningSummary.score_range}` : ''}`
+                    : ''}
+                  {screeningSummary.population_percentile ? ` -- ${screeningSummary.population_percentile} percentile` : ''}
+                </p>
+              )}
             </DocumentReviewItem>
           </section>
         )}
@@ -251,6 +294,9 @@ export function ClinicalReportReviewModal({ documentId, candidates, onClose }: C
                   Score: {item.score}
                   {item.interpretation ? ` -- ${item.interpretation}` : ''}
                 </p>
+                {item.functional_correlates?.length ? (
+                  <p className="review-item-hint">Real-life signs noted: {item.functional_correlates.join(', ')}</p>
+                ) : null}
               </DocumentReviewItem>
             ))}
           </section>
